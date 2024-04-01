@@ -457,6 +457,7 @@ bool CardKnowledge::couldBePlayableWithValue(int value) const
     if (value < 1 || 5 < value || this->cannotBe(Value(value))) return false;
     if (this->playable() != MAYBE) return false;
     CardKnowledge newKnol = *this;
+    
     newKnol.setMustBe(Value(value));
     return newKnol.playable() != NO;
 }

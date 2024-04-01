@@ -32,10 +32,10 @@ setup(
             "csrc/HanabiServer.cc",
             "csrc/BotUtils.cc",
         ] + OPTIONAL_SRC,
-        extra_compile_args=['-fPIC', '-std=c++1y', '-Wno-deprecated', '-O3', '-Wno-sign-compare', '-D_GLIBCXX_USE_CXX11_ABI=0', '-DCARD_ID=1'],
+        extra_compile_args=['-fPIC', '-std=c++17', '-Wno-deprecated', '-O3', '-Wno-sign-compare', '-D_GLIBCXX_USE_CXX11_ABI=0', '-DCARD_ID=1'],
         libraries = ['z'] + boost_libs,
-        library_dirs=['/usr/local/lib'],
-        include_dirs=['csrc'],
+        library_dirs=['/opt/homebrew/lib'],
+        include_dirs=['csrc', '/opt/homebrew/include'],
         undef_macros=['NDEBUG'])
     ],
     cmdclass={"build_ext": BuildExtension},
