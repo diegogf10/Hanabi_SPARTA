@@ -10,6 +10,13 @@ from setuptools import setup
 from torch.utils.cpp_extension import BuildExtension, CppExtension
 import sys
 import os
+import shutil
+
+#Clean Build
+if os.path.exists('build/'):
+    shutil.rmtree('build/')
+if os.path.exists('hanabi_lib.egg-info/'):
+    shutil.rmtree('hanabi_lib.egg-info/')
 
 OPTIONAL_SRC = []
 if int(os.environ.get("INSTALL_TORCHBOT", 0)):

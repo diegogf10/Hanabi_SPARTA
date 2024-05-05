@@ -57,24 +57,24 @@ static std::string nth(int n, int total)
 {
     if (total == 5) {
         switch (n) {
-            case 0: return "oldest";
-            case 1: return "second-oldest";
-            case 2: return "middle";
-            case 3: return "second-newest";
-            default: assert(n == 4); return "newest";
+            case 0: return "O";
+            case 1: return "SO";
+            case 2: return "M";
+            case 3: return "SN";
+            default: assert(n == 4); return "N";
         }
     } else if (total == 4) {
         switch (n) {
-            case 0: return "oldest";
-            case 1: return "second-oldest";
-            case 2: return "second-newest";
-            default: assert(n == 3); return "newest";
+            case 0: return "O";
+            case 1: return "SO";
+            case 2: return "SN";
+            default: assert(n == 3); return "N";
         }
     } else {
         switch (n) {
-            case 0: return "oldest";
-            case 1: return "middle";
-            default: assert(n == 2); return "newest";
+            case 0: return "O";
+            case 1: return "N";
+            default: assert(n == 2); return "N";
         }
     }
 }
@@ -96,11 +96,11 @@ static std::string nth(const Hanabi::CardIndices& ns, int total)
 static std::string colorname(Hanabi::Color color)
 {
     switch (color) {
-        case Hanabi::RED: return "red";
-        case Hanabi::ORANGE: return "orange";
-        case Hanabi::YELLOW: return "yellow";
-        case Hanabi::GREEN: return "green";
-        case Hanabi::BLUE: return "blue";
+        case Hanabi::RED: return "r";
+        case Hanabi::ORANGE: return "o";
+        case Hanabi::YELLOW: return "y";
+        case Hanabi::GREEN: return "g";
+        case Hanabi::BLUE: return "b";
         case Hanabi::INVALID_COLOR: return "Invalid_color";
     }
     assert(false);
@@ -227,7 +227,7 @@ int Server::runGame(const BotFactory &botFactory, int numPlayers, const std::vec
 
 int Server::runGame(std::vector<Bot*> players, const std::vector<Card>& stackedDeck)
 {
-    std::cerr << "Starting game..." << std::endl;
+    std::cerr << "Start" << std::endl;
     /* Create and initialize the bots. */
     players_ = players;
     numPlayers_ = players.size();
@@ -284,12 +284,30 @@ int Server::runGame(std::vector<Bot*> players, const std::vector<Card>& stackedD
 }
 
 int Server::runToCompletion() {
+  //Keep track of previous score for logging purposes
+  int prevScore = -1;
+  std::string prevHands = "";
   while (!this->gameOver()) {
+    // if (log_) {
+    //   *log_ << "CR " << this->cardsRemainingInDeck() << " , E? " << this->deck_.empty() << " , CD " << finalCountdown_ << " , Mull " << this->mulligansRemaining_ << " , SC " << this->currentScore() << std::endl;
+    // }
+
     if (log_) {
-      *log_ << "====> cards remaining: " << this->cardsRemainingInDeck() << " , empty? " << this->deck_.empty() << " , countdown " << finalCountdown_ << " , mulligans " << this->mulligansRemaining_ << " , score " << this->currentScore() << std::endl;
+        // Cards remaining are only logged every 5 drawn cards to compress transcripts
+        if (this->cardsRemainingInDeck() % 5 == 0 && this->cardsRemainingInDeck() != 0) {
+            (*log_) << "There are " << this->cardsRemainingInDeck() << " cards remaining. ";
+        }
+        if (prevScore != this->currentScore()) {
+                (*log_) << "Current score is " << this->currentScore() << ".\n";
+        }
     }
 
-    if (activePlayer_ == 0) this->logHands_();
+    // Current score is logged only when it increases
+    prevScore = this->currentScore();
+    if (activePlayer_ == 0 && prevHands != this->handsAsStringWithoutPlayer0()) {
+        this->logHands_();
+        prevHands = this->handsAsStringWithoutPlayer0();
+    }
     for (int i=0; i < numPlayers_; ++i) {
         observingPlayer_ = i;
         players_[i]->pleaseObserveBeforeMove(*this);
@@ -308,7 +326,12 @@ int Server::runToCompletion() {
     }
     activePlayer_ = (activePlayer_ + 1) % numPlayers_;
     assert(0 <= finalCountdown_ && finalCountdown_ <= numPlayers_);
-    if (deck_.empty()) finalCountdown_ += 1;
+    if (deck_.empty()) {
+        if (finalCountdown_ == 0) {
+            (*log_) << "There are 0 cards remaining in the deck. Each player gets to play one more round before the game ends.\n";
+        }
+        finalCountdown_ += 1;
+    }
   }
 
   return this->currentScore();
@@ -452,9 +475,15 @@ void Server::pleaseDiscard(int index)
     discards_.push_back(discardedCard);
 
     if (log_) {
-        (*log_) << "Player " << activePlayer_
+        if (activePlayer_ == 0) {
+            (*log_) << "You" 
+                << " discarded your " << nth(index, hands_[activePlayer_].size())
+                << " card (" << discardedCard.toString() << "). ";
+        } else {
+            (*log_) << "P" << activePlayer_
                 << " discarded his " << nth(index, hands_[activePlayer_].size())
-                << " card (" << discardedCard.toString() << ").\n";
+                << " card (" << discardedCard.toString() << "). ";
+        }
     }
 
     /* Shift the old cards down, and draw a replacement if possible. */
@@ -464,12 +493,17 @@ void Server::pleaseDiscard(int index)
         Card replacementCard = this->draw_();
         hands_[activePlayer_].push_back(replacementCard);
         if (log_) {
-            (*log_) << "Player " << activePlayer_
-                    << " drew a replacement (" << replacementCard.toString() << ").\n";
+            if (activePlayer_ == 0) {
+                (*log_) << "You drew a new card.\n";
+            } else {
+                (*log_) << "P" << activePlayer_
+                    << " drew " << replacementCard.toString() << ".\n";
+            }   
         }
     }
 
     regainHintStoneIfPossible_();
+    (*log_) << "\n";
     movesFromActivePlayer_ = 1;
 }
 
@@ -500,9 +534,14 @@ void Server::pleasePlay(int index)
 
     if (pile.nextValueIs(selectedCard.value)) {
         if (log_) {
-            (*log_) << "Player " << activePlayer_
+            if (activePlayer_ == 0) {
+                (*log_) << "You played your " << nth(index, hands_[activePlayer_].size())
+                    << " card (" << selectedCard.toString() << "). ";
+            } else {
+                (*log_) << "P" << activePlayer_
                     << " played his " << nth(index, hands_[activePlayer_].size())
-                    << " card (" << selectedCard.toString() << ").\n";
+                    << " card (" << selectedCard.toString() << "). ";
+            }
         }
         pile.increment_();
         if (selectedCard.value == 5) {
@@ -512,10 +551,16 @@ void Server::pleasePlay(int index)
     } else {
         /* The card was unplayable! */
         if (log_) {
-            (*log_) << "Player " << activePlayer_
-                    << " tried to play his " << nth(index, hands_[activePlayer_].size())
+            if (activePlayer_ == 0) {
+                (*log_) << "You played your " << nth(index, hands_[activePlayer_].size())
                     << " card (" << selectedCard.toString() << ")"
-                    << " but failed.\n";
+                    << " but failed. ";
+            } else {
+                (*log_) << "P" << activePlayer_
+                    << " played his " << nth(index, hands_[activePlayer_].size())
+                    << " card (" << selectedCard.toString() << ")"
+                    << " but failed. ";
+            }
         }
         discards_.push_back(selectedCard);
         loseMulligan_();
@@ -528,8 +573,12 @@ void Server::pleasePlay(int index)
         Card replacementCard = this->draw_();
         hands_[activePlayer_].push_back(replacementCard);
         if (log_) {
-            (*log_) << "Player " << activePlayer_
-                    << " drew a replacement (" << replacementCard.toString() << ").\n";
+            if (activePlayer_ == 0) {
+                (*log_) << "You drew a new card.\n";
+            } else {
+                (*log_) << "P" << activePlayer_
+                    << " drew " << replacementCard.toString() << ".\n";
+            }   
         }
     }
 
@@ -561,16 +610,42 @@ void Server::pleaseGiveColorHint(int to, Color color)
 
     if (log_) {
         const bool singular = (card_indices.size() == 1);
-        (*log_) << "Player " << activePlayer_
-                << " told player " << to
-                << " that ";
-        if (card_indices.empty()) {
-            (*log_) << "none of his cards were ";
-        } else if (card_indices.size() == hands_[to].size()) {
-            (*log_) << "his whole hand was ";
+        /*LLM player gives hint*/
+        if (activePlayer_ == 0) {
+            (*log_) << "You told P" << to << " that ";
+            if (card_indices.empty()) {
+                (*log_) << "none of his cards were ";
+            } else if (card_indices.size() == hands_[to].size()) {
+                (*log_) << "his whole hand was ";
+            } else {
+                (*log_) << "his " << nth(card_indices, hands_[to].size())
+                    << (singular ? " card was " : " cards were ");
+            }
+        /*Hint given to LLM player*/
+        } else if (to == 0) {
+            (*log_) << "P" << activePlayer_
+                << " told you that ";
+            if (card_indices.empty()) {
+                (*log_) << "none of your cards were ";
+            } else if (card_indices.size() == hands_[to].size()) {
+                (*log_) << "your whole hand was ";
+            } else {
+                (*log_) << "your " << nth(card_indices, hands_[to].size())
+                    << (singular ? " card was " : " cards were ");
+            }
+        /*Hint between any other players*/
         } else {
-            (*log_) << "his " << nth(card_indices, hands_[to].size())
-                << (singular ? " card was " : " cards were ");
+            (*log_) << "P" << activePlayer_
+                << " told P" << to
+                << " that ";
+            if (card_indices.empty()) {
+                (*log_) << "none of his cards were ";
+            } else if (card_indices.size() == hands_[to].size()) {
+                (*log_) << "his whole hand was ";
+            } else {
+                (*log_) << "his " << nth(card_indices, hands_[to].size())
+                    << (singular ? " card was " : " cards were ");
+            }
         }
         (*log_) << colorname(color) << ".\n";
     }
@@ -611,19 +686,44 @@ void Server::pleaseGiveValueHint(int to, Value value)
 
     if (log_) {
         const bool singular = (card_indices.size() == 1);
-        (*log_) << "Player " << activePlayer_
-                << " told player " << to
-                << " that ";
-        if (card_indices.empty()) {
-            (*log_) << "none of his cards were ";
-        } else if (card_indices.size() == hands_[to].size()) {
-            (*log_) << "his whole hand was ";
+        /*LLM player gives hint*/
+        if (activePlayer_ == 0) {
+            (*log_) << "You told P" << to << " that ";
+            if (card_indices.empty()) {
+                (*log_) << "none of his cards were ";
+            } else if (card_indices.size() == hands_[to].size()) {
+                (*log_) << "his whole hand was ";
+            } else {
+                (*log_) << "his " << nth(card_indices, hands_[to].size())
+                    << (singular ? " card was " : " cards were ");
+            }
+        /*Hint given to LLM player*/
+        } else if (to == 0) {
+            (*log_) << "P" << activePlayer_
+                << " told you that ";
+            if (card_indices.empty()) {
+                (*log_) << "none of your cards were ";
+            } else if (card_indices.size() == hands_[to].size()) {
+                (*log_) << "your whole hand was ";
+            } else {
+                (*log_) << "your " << nth(card_indices, hands_[to].size())
+                    << (singular ? " card was " : " cards were ");
+            }
+        /*Hint between any other players*/
         } else {
-            (*log_) << "his " << nth(card_indices, hands_[to].size())
-                << (singular ? " card was " : " cards were ");
+            (*log_) << "P" << activePlayer_
+                << " told P" << to
+                << " that ";
+            if (card_indices.empty()) {
+                (*log_) << "none of his cards were ";
+            } else if (card_indices.size() == hands_[to].size()) {
+                (*log_) << "his whole hand was ";
+            } else {
+                (*log_) << "his " << nth(card_indices, hands_[to].size())
+                    << (singular ? " card was " : " cards were ");
+            }
         }
-        (*log_) << value
-                << (singular ? ".\n" : "s.\n");
+        (*log_) << "a " << value << ".\n";
     }
 
     /* Notify all the players of the given hint. */
@@ -644,10 +744,16 @@ void Server::regainHintStoneIfPossible_()
     if (hintStonesRemaining_ < NUMHINTS) {
         ++hintStonesRemaining_;
         if (log_) {
-            (*log_) << "Player " << activePlayer_
+            if (activePlayer_ == 0) {
+                (*log_) << "You returned a hint stone, there "
+                    << ((hintStonesRemaining_ == 1) ? "is " : "are ")
+                    << hintStonesRemaining_ << " remaining. ";
+            } else {
+                (*log_) << "P" << activePlayer_
                     << " returned a hint stone; there "
-                    << ((hintStonesRemaining_ == 1) ? "is" : "are") << " now "
-                    << hintStonesRemaining_ << " remaining.\n";
+                    << ((hintStonesRemaining_ == 1) ? "is " : "are ")
+                    << hintStonesRemaining_ << " remaining. ";
+            }
         }
     }
 }
@@ -698,6 +804,17 @@ std::string Server::handsAsString() const
     return oss.str().substr(1);
 }
 
+std::string Server::handsAsStringWithoutPlayer0() const
+{
+    std::ostringstream oss;
+    for (int i=1; i < numPlayers_; ++i) {
+        for (int j=0; j < (int)hands_[i].size(); ++j) {
+            oss << (j ? ',' : ' ') << hands_[i][j].toString();
+        }
+    }
+    return oss.str().substr(1);
+}
+
 std::string Server::pilesAsString() const
 {
     std::ostringstream oss;
@@ -717,8 +834,14 @@ void Server::logHands_() const
     if (log_) {
         (*log_) << "Current hands:";
         for (int i=0; i < numPlayers_; ++i) {
-            for (int j=0; j < (int)hands_[i].size(); ++j) {
-                (*log_) << (j ? "," : " ") << hands_[i][j].toString();
+            if (i==0) {
+                for (int j=0; j < (int)hands_[i].size(); ++j) {
+                    (*log_) << (j ? "," : " ") << "X";
+                }
+            } else {
+                for (int j=0; j < (int)hands_[i].size(); ++j) {
+                    (*log_) << (j ? "," : " ") << hands_[i][j].toString();
+                }
             }
         }
         (*log_) << "\n";
