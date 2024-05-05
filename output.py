@@ -17,7 +17,7 @@ for input_file_path in glob.glob('*output*.txt'):
     # Read and process the file line by line
     with open(input_file_path, 'r') as file:
         for line in file:
-            if 'Starting game' in line:
+            if 'Start' in line:
                 start_processing = True
 
             if start_processing and not end_processing:

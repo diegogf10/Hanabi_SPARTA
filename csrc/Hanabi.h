@@ -305,6 +305,7 @@ public:
     /*================= DEBUGGING TOOLS ======================*/
 
     std::string handsAsString() const;
+    std::string handsAsStringWithoutPlayer0() const;
     std::string pilesAsString() const;
     std::string discardsAsString() const;
     /* This exposes any player's hand, including the observing player.
