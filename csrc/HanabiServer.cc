@@ -686,6 +686,7 @@ void Server::pleaseGiveValueHint(int to, Value value)
 
     if (log_) {
         const bool singular = (card_indices.size() == 1);
+
         /*LLM player gives hint*/
         if (activePlayer_ == 0) {
             (*log_) << "You told P" << to << " that ";
@@ -723,7 +724,8 @@ void Server::pleaseGiveValueHint(int to, Value value)
                     << (singular ? " card was " : " cards were ");
             }
         }
-        (*log_) << "a " << value << ".\n";
+        /*Cast value to integer for logging purposes*/
+        (*log_) << "a " << static_cast<int>(value) << ".\n";
     }
 
     /* Notify all the players of the given hint. */
