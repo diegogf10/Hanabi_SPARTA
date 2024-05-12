@@ -285,30 +285,33 @@ int Server::runGame(std::vector<Bot*> players, const std::vector<Card>& stackedD
 
 int Server::runToCompletion() {
   //Keep track of previous score for logging purposes
-  int prevScore = -1;
+  //int prevScore = -1;
   std::string prevHands = "";
+  if (log_) {
+    *log_ << "Cards Remaining " << this->cardsRemainingInDeck() << " , Mulligans " << this->mulligansRemaining_ << " , Score " << this->currentScore() << std::endl;
+  }
   while (!this->gameOver()) {
     // if (log_) {
     //   *log_ << "CR " << this->cardsRemainingInDeck() << " , E? " << this->deck_.empty() << " , CD " << finalCountdown_ << " , Mull " << this->mulligansRemaining_ << " , SC " << this->currentScore() << std::endl;
     // }
 
-    if (log_) {
-        // Cards remaining are only logged every 5 drawn cards to compress transcripts
-        if (this->cardsRemainingInDeck() % 5 == 0 && this->cardsRemainingInDeck() != 0) {
-            (*log_) << "Cards Remaining " << this->cardsRemainingInDeck();
-            if (prevScore == this->currentScore()) {
-                (*log_) << "\n";
-            } else {
-                (*log_) << ", \n";
-            }
-        }
-        if (prevScore != this->currentScore()) {
-                (*log_) << "Score " << this->currentScore() << "\n";
-        }
-    }
+    // if (log_) {
+    //     // Cards remaining are only logged every 5 drawn cards to compress transcripts
+    //     if (this->cardsRemainingInDeck() % 5 == 0 && this->cardsRemainingInDeck() != 0) {
+    //         (*log_) << "Cards Remaining " << this->cardsRemainingInDeck();
+    //         if (prevScore == this->currentScore()) {
+    //             (*log_) << "\n";
+    //         } else {
+    //             (*log_) << ", ";
+    //         }
+    //     }
+    //     if (prevScore != this->currentScore()) {
+    //             (*log_) << "Score " << this->currentScore() << "\n";
+    //     }
+    // }
 
     // Current score is logged only when it increases
-    prevScore = this->currentScore();
+    //prevScore = this->currentScore();
     if (activePlayer_ == 0 && prevHands != this->handsAsStringWithoutPlayer0()) {
         this->logHands_();
         prevHands = this->handsAsStringWithoutPlayer0();
@@ -508,7 +511,7 @@ void Server::pleaseDiscard(int index)
     }
 
     regainHintStoneIfPossible_();
-    (*log_) << "\n";
+    //(*log_) << "\n";
     movesFromActivePlayer_ = 1;
 }
 
@@ -710,26 +713,26 @@ void Server::regainHintStoneIfPossible_()
 {
     if (hintStonesRemaining_ < NUMHINTS) {
         ++hintStonesRemaining_;
-        if (log_) {
-            if (activePlayer_ == 0) {
-                (*log_) << "You H+, "
-                    << hintStonesRemaining_ << " left. ";
-            } else {
-                (*log_) << "P" << activePlayer_ << " H+, "
-                    << hintStonesRemaining_ << " left. ";
-            }
-        }
+        // if (log_) {
+        //     if (activePlayer_ == 0) {
+        //         (*log_) << "You H+, "
+        //             << hintStonesRemaining_ << " left. ";
+        //     } else {
+        //         (*log_) << "P" << activePlayer_ << " H+, "
+        //             << hintStonesRemaining_ << " left. ";
+        //     }
+        // }
     }
 }
 
 void Server::loseMulligan_() {
     --mulligansRemaining_;
     assert(mulligansRemaining_ >= 0);
-    if (log_) {
+    //if (log_) {
         // Using 'M-' to denote losing a mulligan and simplifying the remaining message
-        (*log_) << (mulligansRemaining_ == 0 ? "M-; none left.\n" :
-                   "M-; " + std::to_string(mulligansRemaining_) + (mulligansRemaining_ == 1 ? " left\n" : " left\n"));
-    }
+        //(*log_) << (mulligansRemaining_ == 0 ? "M-; none left.\n" :
+                   //"M-; " + std::to_string(mulligansRemaining_) + (mulligansRemaining_ == 1 ? " left\n" : " left\n"));
+    //}
 }
 
 
