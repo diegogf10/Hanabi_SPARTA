@@ -227,7 +227,7 @@ int Server::runGame(const BotFactory &botFactory, int numPlayers, const std::vec
 
 int Server::runGame(std::vector<Bot*> players, const std::vector<Card>& stackedDeck)
 {
-    std::cerr << "Start" << std::endl;
+    std::cerr << "Start game" << std::endl;
     /* Create and initialize the bots. */
     players_ = players;
     numPlayers_ = players.size();
@@ -288,13 +288,9 @@ int Server::runToCompletion() {
   //int prevScore = -1;
   std::string prevHands = "";
   if (log_) {
-    *log_ << "Cards Remaining " << this->cardsRemainingInDeck() << " , Mulligans " << this->mulligansRemaining_ << " , Score " << this->currentScore() << std::endl;
+    *log_ << this->cardsRemainingInDeck() << " cards remaining" << std::endl;
   }
   while (!this->gameOver()) {
-    // if (log_) {
-    //   *log_ << "CR " << this->cardsRemainingInDeck() << " , E? " << this->deck_.empty() << " , CD " << finalCountdown_ << " , Mull " << this->mulligansRemaining_ << " , SC " << this->currentScore() << std::endl;
-    // }
-
     // if (log_) {
     //     // Cards remaining are only logged every 5 drawn cards to compress transcripts
     //     if (this->cardsRemainingInDeck() % 5 == 0 && this->cardsRemainingInDeck() != 0) {
@@ -336,7 +332,7 @@ int Server::runToCompletion() {
     assert(0 <= finalCountdown_ && finalCountdown_ <= numPlayers_);
     if (deck_.empty()) {
         if (finalCountdown_ == 0) {
-            (*log_) << "0 Cards Remaining. Each player plays one more round before the game ends\n";
+            (*log_) << "0 Cards Remaining\n";
         }
         finalCountdown_ += 1;
     }
@@ -582,7 +578,7 @@ void Server::pleasePlay(int index)
         hands_[activePlayer_].push_back(replacementCard);
         if (log_) {
             if (activePlayer_ == 0) {
-                (*log_) << "You D\n";
+                (*log_) << "You D card\n";
             } else {
                 (*log_) << "P" << activePlayer_
                     << " D " << replacementCard.toString() << "\n";
@@ -796,16 +792,12 @@ void Server::logHands_() const
 {
     if (log_) {
         (*log_) << "Hands:";
-        for (int i=0; i < numPlayers_; ++i) {
-            if (i==0) {
-                for (int j=0; j < (int)hands_[i].size(); ++j) {
-                    (*log_) << (j ? "," : " ") << "?";
-                }
-            } else {
-                for (int j=0; j < (int)hands_[i].size(); ++j) {
-                    (*log_) << (j ? "," : " ") << hands_[i][j].toString();
-                }
+        for (int i=1; i < numPlayers_; ++i) {
+            (*log_) << " P" << i << " cards";
+            for (int j=0; j < (int)hands_[i].size(); ++j) {
+                (*log_) << (j ? "," : " ") << hands_[i][j].toString();
             }
+            (*log_) << ";";
         }
         (*log_) << "\n";
     }
