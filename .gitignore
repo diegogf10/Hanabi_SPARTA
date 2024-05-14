@@ -4,3 +4,4 @@ dist
 hanabi_lib.egg-info
 *.txt
 env
+.vscode
