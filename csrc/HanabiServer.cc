@@ -291,23 +291,6 @@ int Server::runToCompletion() {
     *log_ << this->cardsRemainingInDeck() << " cards remaining" << std::endl;
   }
   while (!this->gameOver()) {
-    // if (log_) {
-    //     // Cards remaining are only logged every 5 drawn cards to compress transcripts
-    //     if (this->cardsRemainingInDeck() % 5 == 0 && this->cardsRemainingInDeck() != 0) {
-    //         (*log_) << "Cards Remaining " << this->cardsRemainingInDeck();
-    //         if (prevScore == this->currentScore()) {
-    //             (*log_) << "\n";
-    //         } else {
-    //             (*log_) << ", ";
-    //         }
-    //     }
-    //     if (prevScore != this->currentScore()) {
-    //             (*log_) << "Score " << this->currentScore() << "\n";
-    //     }
-    // }
-
-    // Current score is logged only when it increases
-    //prevScore = this->currentScore();
     if (activePlayer_ == 0 && prevHands != this->handsAsStringWithoutPlayer0()) {
         this->logHands_();
         prevHands = this->handsAsStringWithoutPlayer0();
@@ -451,6 +434,148 @@ int Server::cardsRemainingInDeck() const
 int Server::finalCountdown() const
 {
   return finalCountdown_;
+}
+
+ 
+AnswerType Server::checkHints(Question question) const{
+    AnswerType answer = AnswerType::MAYBE;
+
+    for (const auto& hint : hints_) {
+        if (hint.getIsValuable()) {
+            if (hint.getReceiverId() == question.getPlayerId() && hint.getCardPosition() == question.getCardPosition()) {
+                //Check if positive color hint matches question
+                if (question.getType() == Question::Type::COLOR && !hint.getNegativeHint() && hint.getType() == ServerHint::Type::COLOR) {
+                    if (hint.getColor() == question.getColor()) {
+                        answer = AnswerType::YES;
+                    } else {
+                        answer = AnswerType::NO;
+                    }
+                //Check if negative color hint matches question
+                } else if (question.getType() == Question::Type::COLOR && hint.getNegativeHint() && hint.getType() == ServerHint::Type::COLOR) {
+                    if (hint.getColor() == question.getColor()) {
+                        answer = AnswerType::NO;
+                    } else {
+                        answer = AnswerType::MAYBE;
+                    }
+                //Check if positive value hint matches question
+                } else if (question.getType() == Question::Type::NUMBER && !hint.getNegativeHint() && hint.getType() == ServerHint::Type::NUMBER) {
+                    if (hint.getNumber() == question.getNumber()) {
+                        answer = AnswerType::YES;
+                    } else {
+                        answer = AnswerType::NO;
+                    }
+                //Check if negative value hint matches question
+                } else if (question.getType() == Question::Type::NUMBER && hint.getNegativeHint() && hint.getType() == ServerHint::Type::NUMBER) {
+                    if (hint.getNumber() == question.getNumber()) {
+                        answer = AnswerType::NO;
+                    } else {
+                        answer = AnswerType::MAYBE;
+                    }
+                }
+            }
+        } 
+         //If the answer is maybe, keep going through the rest of the hints to look for anything that can help to answer the question with certainty (yes or no)
+        if (answer != AnswerType::MAYBE) {
+            return answer;
+        } 
+    }
+    return answer;
+}
+   
+
+AnswerType Server::checkGameState(Question question) const{
+    int count = 0;
+    int total = 0;
+
+    if (question.getType() == Question::Type::COLOR) {
+        Color color = question.getColor();
+        total = 10;
+        // Check other players' hands
+        for (int player = 0; player < numPlayers(); ++player) {
+            if (player != question.getPlayerId()) {
+                const auto& hand = cheatGetHand(player);
+                for (const auto& card : hand) {
+                    if (card.color == color) {
+                        ++count;
+                    }
+                }
+            }
+        }
+        // Check discard pile
+        for (const auto& card : discards_) {
+            if (card.color == color) {
+                ++count;
+            }
+        }
+        // Check score piles
+        for (int pileIndex = 0; pileIndex < NUMCOLORS; ++pileIndex) {
+            if (piles_[pileIndex].color == color) {
+                count += piles_[pileIndex].size();
+                break;
+            }
+        }
+        // Check player's hints
+        for (const auto& hint : hints_) {
+            if (hint.getIsValuable()) {
+                //Only count when it's a hint about a different card than the one asked in the question
+                if (hint.getReceiverId() == question.getPlayerId() && hint.getType() == ServerHint::Type::COLOR && !hint.getNegativeHint() && hint.getColor() == color && hint.getCardPosition() != question.getCardPosition()) {
+                    ++count;
+                }
+            }
+        }
+
+    } else if (question.getType() == Question::Type::NUMBER) {
+        int value = question.getNumber();
+        total = countValues(value);
+        // Check other players' hands
+        for (int player = 0; player < numPlayers(); ++player) {
+            if (player != question.getPlayerId()) {
+                const auto& hand = cheatGetHand(player);
+                for (const auto& card : hand) {
+                    if (card.value == value) {
+                        ++count;
+                    }
+                }
+            }
+        }
+        // Check discard pile
+        for (const auto& card : discards_) {
+            if (card.value == value) {
+                ++count;
+            }
+        }
+        // Check score piles
+        for (int pileIndex = 0; pileIndex < NUMCOLORS; ++pileIndex) {
+            if (piles_[pileIndex].contains(static_cast<int>(value))) {
+                ++count;
+            }
+        }
+        // Check player's hints
+        for (const auto& hint : hints_) {
+            if (hint.getIsValuable()) {
+                //Only count when it's a hint about a different card than the one asked in the question
+                if (hint.getReceiverId() == question.getPlayerId() && hint.getType() == ServerHint::Type::NUMBER && !hint.getNegativeHint() && hint.getNumber() == value && hint.getCardPosition() != question.getCardPosition()) {
+                    ++count;
+                }
+            }
+            
+        }
+    }
+
+    if (count == total) {
+        return AnswerType::NO;
+    } else {
+        return AnswerType::MAYBE;
+    }
+}
+
+Answer Server::processQuestion(Question question) const{
+    AnswerType result = checkHints(question);
+    //Only check game state when no definitive answer has been found
+    if (result == AnswerType::MAYBE) {
+        result = checkGameState(question);
+    }
+    return Answer(result);
 }
 
 void Server::pleaseDiscard(int index)
@@ -705,6 +830,37 @@ void Server::pleaseGiveValueHint(int to, Value value)
     movesFromActivePlayer_ = 1;
 }
 
+void Server::pleaseUpdateValuableHints() {
+    for (auto& hint : hints_) {
+        //Only check valuable hints. Once a hint is not valuable, it should not be considered anymore
+        if (hint.getIsValuable() == true) {
+            int playerId = hint.getReceiverId();
+            int cardPosition = hint.getCardPosition();
+            const std::vector<Card>& playerHand = cheatGetHand(playerId);
+
+            // If the hint card position is out of bounds, mark it as not valuable
+            if (cardPosition >= playerHand.size()) {
+                hint.setIsValuable(false);
+                continue;
+            }
+
+            // Check if the hint still aligns with the hint information
+            const Card& card = playerHand[cardPosition];
+            if (hint.getType() == ServerHint::Type::COLOR && !hint.getNegativeHint() && card.color == hint.getColor()) {
+                continue;
+            } else if (hint.getType() == ServerHint::Type::COLOR && hint.getNegativeHint() && card.color != hint.getColor()) {
+                continue;
+            } else if (hint.getType() == ServerHint::Type::NUMBER && !hint.getNegativeHint() && card.value == hint.getNumber()) {
+                continue;
+            } else if (hint.getType() == ServerHint::Type::NUMBER && hint.getNegativeHint() && card.value != hint.getNumber()) {
+                continue;
+            } else {
+                hint.setIsValuable(false);
+            }
+        }
+    }
+}
+
 void Server::regainHintStoneIfPossible_()
 {
     if (hintStonesRemaining_ < NUMHINTS) {
@@ -788,6 +944,17 @@ std::vector<Card> Server::cheatGetHand(int index) const
   return hands_[index];
 }
 
+int Server::countValues(int value) const
+{
+    switch (value) {
+        case 1: return 15;
+        case 2: case 3: case 4: return 10;
+        case 5: return 5;
+        default: HANABI_SERVER_ASSERT(false, "invalid card value");
+    }
+    return -1; // silence compiler
+}
+
 void Server::logHands_() const
 {
     if (log_) {
@@ -831,5 +998,105 @@ std::shared_ptr<Hanabi::BotFactory> getBotFactory(const std::string &botName) {
   return getBotFactoryMap().at(botName);
 }
 
+// Constructor for color question
+Question::Question(int playerId, int cardPosition, Color color)
+    : type(Type::COLOR), playerId(playerId), cardPosition(cardPosition), color(color) {}
+
+// Constructor for number question
+Question::Question(int playerId, int cardPosition, int number)
+    : type(Type::NUMBER), playerId(playerId), cardPosition(cardPosition), number(number) {}
+
+
+// Getter for QuestionType
+Question::Type Question::getType() const {
+    // Return the type of question
+    return type;
+}
+
+// Getter for playerId
+int Question::getPlayerId() const {
+    // Return the ID of the player who is meant to answer the question
+    return playerId;
+}
+
+// Getter for cardPosition
+int Question::getCardPosition() const {
+    // Return the card position
+    return cardPosition;
+}
+
+Color Question::getColor() const {
+    assert(type == Type::COLOR);
+    return color;
+}
+
+int Question::getNumber() const {
+    assert(type == Type::NUMBER);
+    return number;
+}
+
+// Constructor for color hint
+ServerHint::ServerHint(int giverId, int receiverId, int cardPosition, bool negativeHint, Color color, bool isValuable)
+    : type(Type::COLOR), giverId(giverId), receiverId(receiverId), cardPosition(cardPosition), negativeHint(negativeHint), color(color), isValuable(isValuable) {}
+
+// Constructor for value hint
+ServerHint::ServerHint(int giverId, int receiverId, int cardPosition, bool negativeHint, int number, bool isValuable)
+    : type(Type::NUMBER), giverId(giverId), receiverId(receiverId), cardPosition(cardPosition), negativeHint(negativeHint), number(number), isValuable(isValuable) {}
+
+ServerHint::Type ServerHint::getType() const {
+    // Return the type of hint
+    return type;
+}
+
+int ServerHint::getGiverId() const {
+    return giverId;
+}
+
+int ServerHint::getReceiverId() const {
+    return receiverId;
+}
+
+int ServerHint::getCardPosition() const {
+    return cardPosition;
+}
+
+bool ServerHint::getNegativeHint() const {
+    return negativeHint;
+}
+
+Color ServerHint::getColor() const {
+    assert(type == Type::COLOR);
+    return color;
+}  
+
+int ServerHint::getNumber() const {
+    assert(type == Type::NUMBER);
+    return number;
+}
+
+bool ServerHint::getIsValuable() const {
+    return isValuable;
+}
+
+void ServerHint::setIsValuable(bool isValuable) {
+    this->isValuable = isValuable;
+}
+
+//Constructors for Answer class
+Answer::Answer(AnswerType answer)
+    : answer(answer) { }
+
+AnswerType Answer::getType() const {
+    return answer;
+}
+
+std::string Answer::answerAsString() const {
+    switch (answer) {
+        case AnswerType::NO: return "No";
+        case AnswerType::YES: return "Yes";
+        case AnswerType::MAYBE: return "Maybe";
+        default: return "Unknown";
+    }
+}
 
 }  /* namespace Hanabi */
