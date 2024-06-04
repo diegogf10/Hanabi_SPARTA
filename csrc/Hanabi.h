@@ -59,6 +59,10 @@ namespace Hanabi {
     class Server;
     class Bot;
     class BotFactory;
+    class Question;
+    class ServerHint;
+    enum class AnswerType;
+    class Answer;
 }  /* namespace Hanabi */
 
 namespace Hanabi {
@@ -267,6 +271,20 @@ public:
      * values of the top cards in every pile. */
     int currentScore() const;
 
+     /* Check if hints allow player to answer a question with certainty (yes or no).
+     * This function should be called right before the player's turn (before answering the quesiton) */    
+    AnswerType checkHints(Question question) const;
+
+    /* Check if game state allows player to answer a question with certainty.
+     * Count all known cards of that color/value to see if player can infer the answer to the question.
+     * No and maybe are the only valid answers that a player can give by checking the game state.
+     * This function should be called right before the player's turn (before answering the quesiton) */
+    AnswerType checkGameState(Question question) const;
+
+
+    /* Provide final answer to question.
+     * This function should be called right after the formulation of a question during the game */
+    Answer processQuestion(Question question) const;
 
     /*================= MUTATORS =============================*/
 
@@ -302,12 +320,21 @@ public:
      * Throws an exception if there are no hint-stones left. */
     virtual void pleaseGiveValueHint(int player, Value value);
 
+    /* Update the value of the hints based on the current game state.
+     * This function should be called right before the player's turn
+     * but also right before the player draws a new card right after playing/discarding
+     * (prevent that an old hint is also valuable for a new card that 
+     * the player should have no knowledge about) */
+    virtual void pleaseUpdateValuableHints();
+
     /*================= DEBUGGING TOOLS ======================*/
 
     std::string handsAsString() const;
     std::string handsAsStringWithoutPlayer0() const;
     std::string pilesAsString() const;
     std::string discardsAsString() const;
+    /* Returns the total amount of cards of a specific value in the deck. */
+    int countValues(int value) const;
     /* This exposes any player's hand, including the observing player.
      * This should only be used for debugging purposes! */
     std::vector<Card> cheatGetHand(int index) const;
@@ -338,6 +365,7 @@ protected:
     /* Basically-hidden state */
     std::vector<std::vector<Card> > hands_;
     std::vector<Card> deck_;
+    std::vector<ServerHint> hints_;
 
     /* Private methods */
     Card draw_(void);
@@ -399,6 +427,80 @@ void registerBotFactory(std::string name, std::shared_ptr<Hanabi::BotFactory> fa
 std::shared_ptr<Hanabi::BotFactory> getBotFactory(const std::string &botName);
 
 }  /* namespace Hanabi */
+
+namespace Hanabi {
+
+class Question {
+public:
+    enum class Type { COLOR, NUMBER };
+
+    // Constructor for color question
+    Question(int playerId, int cardPosition, Color color);
+
+    // Constructor for number question
+    Question(int playerId, int cardPosition, int number);
+
+    Type getType() const;
+    int getPlayerId() const;
+    int getCardPosition() const;
+    Color getColor() const;  // Only valid if type is COLOR
+    int getNumber() const;  // Only valid if type is NUMBER
+
+private:
+    Type type;
+    int playerId;
+    int cardPosition;
+    Color color;  // Only valid if type is COLOR
+    int number;  // Only valid if type is NUMBER
+};
+
+class ServerHint {
+public:
+    enum class Type { COLOR, NUMBER };
+
+    // Constructor for color hint
+    ServerHint(int giverId, int receiverId, int cardPosition, bool negativeHint, Color color, bool isValuable = true);
+
+    //Constructor for value hint
+    ServerHint(int giverId, int receiverId, int cardPosition, bool negativeHint, int number, bool isValuable = true);
+
+    Type getType() const;
+    int getGiverId() const;
+    int getReceiverId() const;
+    int getCardPosition() const;
+    bool getNegativeHint() const;
+    Color getColor() const;  // Only valid if type is COLOR
+    int getNumber() const;  // Only valid if type is NUMBER
+    bool getIsValuable() const;
+    void setIsValuable(bool isValuable);
+
+private:
+    Type type;
+    int giverId;
+    int receiverId;
+    int cardPosition;
+    int negativeHint;
+    Color color;  // Only valid if type is COLOR
+    int number;  // Only valid if type is NUMBER
+    bool isValuable;      // Indicates whether the hint is still valuable
+};
+
+enum class AnswerType { NO, YES, MAYBE };
+
+class Answer {
+public:
+  //Constructor
+  Answer(AnswerType answer);
+
+  AnswerType getType() const;
+  std::string answerAsString() const;
+
+private:
+  AnswerType answer;
+
+};
+
+} /* namespace Hanabi */
 
 
 #endif /* H_HANABI_SERVER */
