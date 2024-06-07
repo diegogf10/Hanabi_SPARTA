@@ -284,8 +284,7 @@ int Server::runGame(std::vector<Bot*> players, const std::vector<Card>& stackedD
 }
 
 int Server::runToCompletion() {
-  //Keep track of previous score for logging purposes
-  //int prevScore = -1;
+
   std::string prevHands = "";
   if (log_) {
     *log_ << this->cardsRemainingInDeck() << " cards remaining" << std::endl;
@@ -301,6 +300,24 @@ int Server::runToCompletion() {
     }
     observingPlayer_ = activePlayer_;
     movesFromActivePlayer_ = 0;
+
+    //Update value of hints for consistency
+    this->pleaseUpdateValuableHints();
+
+    
+    if (activePlayer_ == 0) {
+        //TODO: Create and ask question
+        Question question(activePlayer_, 2, 3);
+        //TODO: Process question
+        Answer answer = processQuestion(question);
+        //TODO: Log Q&A
+        (*log_) << "Is your " 
+                << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
+                << question.getNumber() << "?\n";
+        (*log_) << answer.answerAsString() << "\n";
+    } 
+    
+
     players_[activePlayer_]->pleaseMakeMove(*this);  /* make a move */
     // added this short-circuit in case you forcibly end the game, toa void asserts and waiting
     if (this->gameOver()) break;
@@ -632,8 +649,11 @@ void Server::pleaseDiscard(int index)
     }
 
     regainHintStoneIfPossible_();
-    //(*log_) << "\n";
     movesFromActivePlayer_ = 1;
+
+    //Hint logic. It only affects the hints vector so it does not matter where in pleaseDiscard() it is updated
+    this->pleaseUpdateValuableHintsAfterPlay(index);
+    this->pleaseUpdateHintCardPosition(index);
 }
 
 void Server::pleasePlay(int index)
@@ -714,6 +734,10 @@ void Server::pleasePlay(int index)
     this->logPiles_();
 
     movesFromActivePlayer_ = 1;
+
+    //Hint logic. It only affects the hints vector so it does not matter where in pleasePlay() it is updated
+    this->pleaseUpdateValuableHintsAfterPlay(index);
+    this->pleaseUpdateHintCardPosition(index);
 }
 
 void Server::pleaseGiveColorHint(int to, Color color)
@@ -757,8 +781,18 @@ void Server::pleaseGiveColorHint(int to, Color color)
         }
         
         (*log_) << (singular ? " card is " : " cards are ") << colorname(color) << "\n"; 
-}
+    }
 
+    //Hint logic. Given hint should be added to the server hint vector
+    if (card_indices.empty()) {
+        for (int i=0; i < sizeOfHandOfPlayer(activePlayer_); ++i) {
+            this->pleaseAddColorHint(activePlayer_, to, i, true, color);
+        }
+    } else {
+        for (int i = 0; i < card_indices.size(); ++i) {
+            this->pleaseAddColorHint(activePlayer_, to, card_indices[i], false, color);
+        }
+    }
 
     /* Notify all the players of the given hint. */
     movesFromActivePlayer_ = -1;
@@ -817,6 +851,17 @@ void Server::pleaseGiveValueHint(int to, Value value)
         (*log_) << (singular ? " card is " : " cards are ") << static_cast<int>(value) << "\n";
     }
 
+    //Hint logic. Given hint should be added to the server hint vector
+    if (card_indices.empty()) {
+        for (int i=0; i < sizeOfHandOfPlayer(activePlayer_); ++i) {
+            this->pleaseAddValueHint(activePlayer_, to, i, true, static_cast<int>(value));
+        }
+    } else {
+        for (int i = 0; i < card_indices.size(); ++i) {
+            this->pleaseAddValueHint(activePlayer_, to, card_indices[i], false, static_cast<int>(value));
+        }
+    }
+
     /* Notify all the players of the given hint. */
     movesFromActivePlayer_ = -1;
     int oldObservingPlayer = observingPlayer_;
@@ -830,6 +875,20 @@ void Server::pleaseGiveValueHint(int to, Value value)
     movesFromActivePlayer_ = 1;
 }
 
+void Server::pleaseAddColorHint(int giverId, int receiverId, int cardPosition, bool negativeHint, Color color) {
+    ServerHint newHint(giverId, receiverId, cardPosition, negativeHint, color);
+    hints_.push_back(newHint);
+}
+
+void Server::pleaseAddValueHint(int giverId, int receiverId, int cardPosition, bool negativeHint, int number) {
+    ServerHint newHint(giverId, receiverId, cardPosition, negativeHint, number);
+    hints_.push_back(newHint);
+}
+
+//TODO: revise logic to update valuable hints. 1. Do we need to go through all hints? 2. Behaviour when player plays or discards a card - how should it affect existing valuable hints?
+//If a hint is given, it is added to the vector of hints as a valuable hint
+//If a card is played or discarded, two things happen: 1. Hint is not valuable anymore (negative or not). 2. Valuable hints about cards to the right of the of that card need to change its index (index - 1)
+//Redifine this function (or remove it if not necessary)
 void Server::pleaseUpdateValuableHints() {
     for (auto& hint : hints_) {
         //Only check valuable hints. Once a hint is not valuable, it should not be considered anymore
@@ -861,30 +920,33 @@ void Server::pleaseUpdateValuableHints() {
     }
 }
 
+void Server::pleaseUpdateValuableHintsAfterPlay(int index) {
+    for (auto& hint : hints_) {
+        //Only look for valuable hints of active player in the position of the card played-discarded, no matter the color or the value
+        if (hint.getIsValuable() == true && hint.getReceiverId() == activePlayer() && hint.getCardPosition() == index) {
+            hint.setIsValuable(false);
+        }
+    }
+}
+
+void Server::pleaseUpdateHintCardPosition(int index) {
+    for (auto& hint : hints_) {
+        if (hint.getReceiverId() == activePlayer() && hint.getCardPosition() > index) {
+            hint.setCardPosition(hint.getCardPosition() - 1);
+        }
+    }
+}
+
 void Server::regainHintStoneIfPossible_()
 {
     if (hintStonesRemaining_ < NUMHINTS) {
         ++hintStonesRemaining_;
-        // if (log_) {
-        //     if (activePlayer_ == 0) {
-        //         (*log_) << "You H+, "
-        //             << hintStonesRemaining_ << " left. ";
-        //     } else {
-        //         (*log_) << "P" << activePlayer_ << " H+, "
-        //             << hintStonesRemaining_ << " left. ";
-        //     }
-        // }
     }
 }
 
 void Server::loseMulligan_() {
     --mulligansRemaining_;
     assert(mulligansRemaining_ >= 0);
-    //if (log_) {
-        // Using 'M-' to denote losing a mulligan and simplifying the remaining message
-        //(*log_) << (mulligansRemaining_ == 0 ? "M-; none left.\n" :
-                   //"M-; " + std::to_string(mulligansRemaining_) + (mulligansRemaining_ == 1 ? " left\n" : " left\n"));
-    //}
 }
 
 
@@ -1058,6 +1120,10 @@ int ServerHint::getReceiverId() const {
 
 int ServerHint::getCardPosition() const {
     return cardPosition;
+}
+
+void ServerHint::setCardPosition(int newPosition) {
+    cardPosition = newPosition;
 }
 
 bool ServerHint::getNegativeHint() const {

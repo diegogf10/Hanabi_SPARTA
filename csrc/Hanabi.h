@@ -320,12 +320,26 @@ public:
      * Throws an exception if there are no hint-stones left. */
     virtual void pleaseGiveValueHint(int player, Value value);
 
-    /* Update the value of the hints based on the current game state.
-     * This function should be called right before the player's turn
-     * but also right before the player draws a new card right after playing/discarding
-     * (prevent that an old hint is also valuable for a new card that 
-     * the player should have no knowledge about) */
+    /* Add a color hint to the hint vector in the server */
+    virtual void pleaseAddColorHint(int giverId, int receiverId, int cardPosition, bool negativeHint, Color color);
+
+    /* Add a value hint to the hint vector in the server */
+    virtual void pleaseAddValueHint(int giverId, int receiverId, int cardPosition, bool negativeHint, int number);
+
+    /* Update the value of all hints based on the current game state.
+     * This function is called right before the player's turn for consisteny on the answer generation.
+     * This function is most likely not necessary */
     virtual void pleaseUpdateValuableHints();
+
+    /* Set the value of the corresonding hints to false after a player plays or discards a card */
+    virtual void pleaseUpdateValuableHintsAfterPlay(int index);
+
+    /* Update the position of cards in hints after a card is played or discarded.
+     * The convention in this Hanabi environment is that when a card is played or discarded
+     * all the cards in subsequent positions are shifted down so that the new drawn card
+     * is placed at the leftmost position (newest card). Therefore, hints need to be updated 
+     * accordingly when a card is played */
+    virtual void pleaseUpdateHintCardPosition(int index);
 
     /*================= DEBUGGING TOOLS ======================*/
 
@@ -468,6 +482,7 @@ public:
     int getGiverId() const;
     int getReceiverId() const;
     int getCardPosition() const;
+    void setCardPosition(int newPosition);
     bool getNegativeHint() const;
     Color getColor() const;  // Only valid if type is COLOR
     int getNumber() const;  // Only valid if type is NUMBER
