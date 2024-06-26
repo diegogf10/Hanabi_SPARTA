@@ -286,9 +286,11 @@ int Server::runGame(std::vector<Bot*> players, const std::vector<Card>& stackedD
 int Server::runToCompletion() {
 
   std::string prevHands = "";
+  int questionRound = selectQuestionRound(); // Select the round to generate the question
   if (log_) {
     *log_ << this->cardsRemainingInDeck() << " cards remaining" << std::endl;
   }
+
   while (!this->gameOver()) {
     if (activePlayer_ == 0 && prevHands != this->handsAsStringWithoutPlayer0()) {
         this->logHands_();
@@ -305,16 +307,22 @@ int Server::runToCompletion() {
     this->pleaseUpdateValuableHints();
 
     
-    if (activePlayer_ == 0) {
-        //TODO: Create and ask question
-        Question question(activePlayer_, 2, 3);
-        //TODO: Process question
+    if (this->cardsRemainingInDeck() == questionRound && activePlayer_ == 0) {
+        // Generate question attributes and log the question and answer
+        Question question = this->generateRandomQuestion();
         Answer answer = processQuestion(question);
-        //TODO: Log Q&A
-        (*log_) << "Is your " 
-                << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
-                << question.getNumber() << "?\n";
+        if (question.getType() == Question::Type::COLOR) {
+            (*log_) << "Is your " 
+                    << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card "
+                    << colorname(question.getColor()) << "?\n";
+        } else {
+            (*log_) << "Is your " 
+                    << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
+                    << question.getNumber() << "?\n";
+        }
         (*log_) << answer.answerAsString() << "\n";
+        // End the game after generating the question and logging the answer
+        break;
     } 
     
 
@@ -934,6 +942,47 @@ void Server::pleaseUpdateHintCardPosition(int index) {
         if (hint.getReceiverId() == activePlayer() && hint.getCardPosition() > index) {
             hint.setCardPosition(hint.getCardPosition() - 1);
         }
+    }
+}
+
+int Server::selectQuestionRound() {
+    std::mt19937 rng(std::random_device{}());
+
+    // Uniform distributions for early, middle, and late game
+    std::uniform_int_distribution<int> earlyDist(28, 40);
+    std::uniform_int_distribution<int> middleDist(14, 27);
+    std::uniform_int_distribution<int> lateDist(1, 13);
+
+    // Randomly choose one of the distributions
+    std::uniform_int_distribution<int> categoryDist(0, 2);
+    int category = categoryDist(rng);
+
+    if (category == 0) {
+        return earlyDist(rng);
+    } else if (category == 1) {
+        return middleDist(rng);
+    } else {
+        return lateDist(rng);
+    }
+}
+
+Question Server::generateRandomQuestion() {
+    std::mt19937 rng(std::random_device{}());
+
+    std::uniform_int_distribution<int> typeDist(0, 1);
+    std::uniform_int_distribution<int> colorDist(0, NUMCOLORS - 1);
+    std::uniform_int_distribution<int> valueDist(1, VALUE_MAX);
+    std::uniform_int_distribution<int> positionDist(0, this->handSize() - 1);
+
+    int type = typeDist(rng);
+    int position = positionDist(rng);
+
+    if (type == 0) {
+        Color color = static_cast<Color>(colorDist(rng));
+        return Question(this->activePlayer_, position, color);
+    } else {
+        Value value = static_cast<Value>(valueDist(rng));
+        return Question(this->activePlayer_, position, value);
     }
 }
 

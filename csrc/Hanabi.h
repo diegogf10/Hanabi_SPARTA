@@ -15,6 +15,7 @@
 #include <tuple>
 #include "ThreadPool.h"
 #include <future>
+#include <variant>
 
 
 namespace Params {
@@ -281,6 +282,12 @@ public:
      * This function should be called right before the player's turn (before answering the quesiton) */
     AnswerType checkGameState(Question question) const;
 
+    /* Choose the stage of the game where the question will be generated.
+     * The stage of the game is represented by the number of cards remaining in the deck */
+    int selectQuestionRound();
+
+    /* Generate a question following a uniform distribution to ensure variability. */
+    Question generateRandomQuestion();
 
     /* Provide final answer to question.
      * This function should be called right after the formulation of a question during the game */
