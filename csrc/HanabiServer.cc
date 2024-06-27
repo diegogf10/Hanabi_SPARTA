@@ -307,7 +307,7 @@ int Server::runToCompletion() {
     this->pleaseUpdateValuableHints();
 
     
-    if (this->cardsRemainingInDeck() == questionRound && activePlayer_ == 0) {
+    if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
         // Generate question attributes and log the question and answer
         Question question = this->generateRandomQuestion();
         Answer answer = processQuestion(question);
@@ -321,6 +321,8 @@ int Server::runToCompletion() {
                     << question.getNumber() << "?\n";
         }
         (*log_) << answer.answerAsString() << "\n";
+        //(*log_) << questionRound << "\n";
+        //(*log_) << this->cardsRemainingInDeck() << "\n";
         // End the game after generating the question and logging the answer
         break;
     } 
@@ -949,6 +951,7 @@ int Server::selectQuestionRound() {
     std::mt19937 rng(std::random_device{}());
 
     // Uniform distributions for early, middle, and late game
+    // Distribution adjusted for 2 players game
     std::uniform_int_distribution<int> earlyDist(28, 40);
     std::uniform_int_distribution<int> middleDist(14, 27);
     std::uniform_int_distribution<int> lateDist(1, 13);
