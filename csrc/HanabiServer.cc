@@ -306,9 +306,8 @@ int Server::runToCompletion() {
     //Update value of hints for consistency
     this->pleaseUpdateValuableHints();
 
-    
+    //In game Q&A logic
     if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
-        // Generate question attributes and log the question and answer
         Question question = this->generateRandomQuestion();
         Answer answer = processQuestion(question);
         if (question.getType() == Question::Type::COLOR) {
@@ -320,9 +319,15 @@ int Server::runToCompletion() {
                     << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
                     << question.getNumber() << "?\n";
         }
-        (*log_) << answer.answerAsString() << "\n";
-        //(*log_) << questionRound << "\n";
-        //(*log_) << this->cardsRemainingInDeck() << "\n";
+        (*log_) << "answer: " << answer.answerAsString() << "\n";
+        //Log different variables for dataset analysis later on
+        (*log_) << "cards_remaining: " << questionRound << "\n";
+        (*log_) << "question_position: " << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << "\n";
+        if (question.getType() == Question::Type::COLOR) {
+            (*log_) << "question_value: " << colorname(question.getColor()) << "\n";
+         } else {
+            (*log_) << "question_value: " << question.getNumber() << "\n";
+        }
         // End the game after generating the question and logging the answer
         break;
     } 
@@ -950,23 +955,11 @@ void Server::pleaseUpdateHintCardPosition(int index) {
 int Server::selectQuestionRound() {
     std::mt19937 rng(std::random_device{}());
 
-    // Uniform distributions for early, middle, and late game
-    // Distribution adjusted for 2 players game
-    std::uniform_int_distribution<int> earlyDist(28, 40);
-    std::uniform_int_distribution<int> middleDist(14, 27);
-    std::uniform_int_distribution<int> lateDist(1, 13);
+    int first_question_round = 50 - numPlayers_ * handSize();
+    int last_question_round = numPlayers_ - 1;
+    std::uniform_int_distribution<int> remainingCardDist(last_question_round, first_question_round);
 
-    // Randomly choose one of the distributions
-    std::uniform_int_distribution<int> categoryDist(0, 2);
-    int category = categoryDist(rng);
-
-    if (category == 0) {
-        return earlyDist(rng);
-    } else if (category == 1) {
-        return middleDist(rng);
-    } else {
-        return lateDist(rng);
-    }
+    return remainingCardDist(rng);
 }
 
 Question Server::generateRandomQuestion() {

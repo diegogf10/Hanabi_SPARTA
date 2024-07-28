@@ -10,6 +10,7 @@
 #include "BotFactory.h"
 
 using namespace Hanabi;
+// using namespace Simply;
 
 static void _registerBots() {
   registerBotFactory("SimpleBot", std::shared_ptr<Hanabi::BotFactory>(new ::BotFactory<SimpleBot>()));

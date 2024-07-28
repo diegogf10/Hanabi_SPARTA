@@ -160,6 +160,7 @@ void eval_bot(
 
     for (int i=0; i < games; ++i) {
         int score = server.runGame(*botFactory, players);
+        std::cout << "botname: " << botname << std::endl;
         std::cout << "Final score " << i << " : " << score << " bomb: "
                   << (server.mulligansRemaining() == 0 ? 1 : 0) << std::endl;
         assert(score == server.currentScore());

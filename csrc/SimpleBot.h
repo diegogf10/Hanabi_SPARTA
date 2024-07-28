@@ -6,6 +6,7 @@
 
 #include "Hanabi.h"
 
+// namespace Simply {
 struct CardKnowledge {
     CardKnowledge();
 
@@ -25,6 +26,8 @@ private:
     Possibility colors_[Hanabi::NUMCOLORS];
     Possibility values_[5+1];
 };
+
+// } //namespace Simply
 
 class SimpleBot final : public Hanabi::Bot {
 
