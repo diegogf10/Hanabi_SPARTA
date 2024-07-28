@@ -3,5 +3,6 @@ build
 dist
 hanabi_lib.egg-info
 *.txt
+*.json
 env
 .vscode
