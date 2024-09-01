@@ -825,6 +825,9 @@ bool SmartBot::maybePlayLowestPlayableCard(Server &server)
     /* If I found a card to play, play it. */
     if (best_index != -1) {
         server.pleasePlay(best_index);
+        server.moveExplanation = "The player chose to play a " + (handKnowledge_[me_][best_index].value() == -1 ? "card of unknown value" : "card of value " + std::to_string(handKnowledge_[me_][best_index].value())) + 
+                                 ". The player considered all visible information and looked for a card in his hand that other players don't know is playable yet, to prevent wasted hints later in the game. " +
+                                 "Lower value cards are generally preferred by this player because they have the potential to enable more future plays.";
         return true;
     }
 

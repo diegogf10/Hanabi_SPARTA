@@ -29,6 +29,7 @@ if __name__ == "__main__":
     parser.add_argument('--log_every', type=int, default=100)
     parser.add_argument('--seed', type=int, default=-1,
                         help="-1 means to pick a random seed")
+    parser.add_argument('--qa', type=int, default=0)
 
     opt = parser.parse_args()
     hanabi_lib.eval_bot(
@@ -36,5 +37,6 @@ if __name__ == "__main__":
         players=opt.players,
         games=opt.games,
         log_every=opt.log_every,
-        seed=opt.seed
+        seed=opt.seed,
+        qa=opt.qa
     )

@@ -318,6 +318,9 @@ bool ValueBot::maybePlayLowestPlayableCard(Server &server)
     if (best_index != -1) {
         assert(1 <= best_value && best_value <= 5);
         server.pleasePlay(best_index);
+        server.moveExplanation = "The player played their lowest playable card with value " + 
+                                 std::to_string(best_value) + ". Playing the lowest playable card " +
+                                 "helps build fireworks efficiently and opens up options for higher cards.";
         return true;
     }
 
@@ -330,6 +333,7 @@ bool ValueBot::maybeDiscardWorthlessCard(Server &server)
         const ValueB::CardKnowledge &knol = handKnowledge_[me_][i];
         if (knol.isWorthless) {
             server.pleaseDiscard(i);
+            server.moveExplanation = "The player discarded a card known to be worthless. This is a safe discard that doesn't risk losing valuable cards and regains a hint token.";
             return true;
         }
     }
@@ -436,6 +440,9 @@ bool ValueBot::maybeGiveValuableWarning(Server &server)
         /* Excellent; we found a hint that will cause him to play a card
          * instead of discarding. */
         bestHint.give(server);
+        server.moveExplanation = "The player gave a hint to warn the next player (" +
+                                (player_to_warn == 0) ? "You" : ("P" + std::to_string(player_to_warn)) + 
+                                ") about a valuable card they might discard. This prevents the loss of important cards.";
         return true;
     }
 
@@ -447,6 +454,9 @@ bool ValueBot::maybeGiveValuableWarning(Server &server)
     }
 
     server.pleaseGiveValueHint(player_to_warn, targetCard.value);
+    server.moveExplanation = "The player gave a value hint to the next player (" +
+                            (player_to_warn == 0) ? "You" : ("P" + std::to_string(player_to_warn)) + 
+                            ") as a warning about a valuable card. This is a last resort to prevent discarding an important card when no other helpful hints are possible.";
     return true;
 }
 
@@ -468,6 +478,9 @@ bool ValueBot::maybeGiveHelpfulHint(Server &server)
 
     /* Give the hint. */
     bestHint.give(server);
+    server.moveExplanation = "The player gave the most informative hint possible, revealing information about " +
+                             std::to_string(bestHint.information_content) + " card(s). This hint likely " +
+                             "identifies playable cards or provides crucial information about card values or colors.";
     return true;
 }
 
@@ -478,6 +491,7 @@ bool ValueBot::maybeDiscardOldCard(Server &server)
         assert(!knol.isPlayable);
         if (knol.isValuable) continue;
         server.pleaseDiscard(i);
+        server.moveExplanation = "The player discarded their oldest (leftmost) non-valuable card. This is a conservative discard strategy when no better options are available, minimizing the risk of losing important cards.";
         return true;
     }
     /* I didn't find anything I was willing to discard. */
@@ -506,6 +520,8 @@ void ValueBot::pleaseMakeMove(Server &server)
         const int numPlayers = server.numPlayers();
         const int right_partner = (me_ + numPlayers - 1) % numPlayers;
         server.pleaseGiveValueHint(right_partner, server.handOfPlayer(right_partner)[0].value);
+        server.moveExplanation = "The player couldn't make a productive move and discarding isn't allowed as all hint tokens are available. They gave a value hint about the oldest card of the next player in turn (" 
+                                + (right_partner == 0) ? "You" : ("P" + std::to_string(right_partner)) + ") as a default action.";
     } else {
         if (maybeDiscardWorthlessCard(server)) return;
         if (maybeDiscardOldCard(server)) return;
@@ -521,5 +537,7 @@ void ValueBot::pleaseMakeMove(Server &server)
             }
         }
         server.pleaseDiscard(best_index);
+        server.moveExplanation = "The player was forced to discard a valuable card. This is a last resort when all cards in hand are valuable. They chose the highest-valued card (" 
+                                + std::to_string(handKnowledge_[me_][best_index].value()) + ") to minimize the impact on lower-value fireworks.";
     }
 }

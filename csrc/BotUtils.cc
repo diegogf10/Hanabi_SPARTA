@@ -56,7 +56,7 @@ std::string colorname(Hanabi::Color color)
 {
     switch (color) {
         case Hanabi::RED: return "red";
-        case Hanabi::ORANGE: return "orange";
+        case Hanabi::WHITE: return "white";
         case Hanabi::YELLOW: return "yellow";
         case Hanabi::GREEN: return "green";
         case Hanabi::BLUE: return "blue";

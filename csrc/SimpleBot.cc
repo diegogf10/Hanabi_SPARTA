@@ -181,6 +181,8 @@ bool SimpleBot::maybePlayLowestPlayableCard(Server &server)
     if (best_index != -1) {
         assert(1 <= best_value && best_value <= 5);
         server.pleasePlay(best_index);
+        server.moveExplanation = "The player decided to play the lowest-valued card (value " + std::to_string(best_value) + 
+                                 ") that they believe is playable. This strategy aims to build the fireworks efficiently.";
         return true;
     }
 
@@ -258,10 +260,23 @@ bool SimpleBot::maybeGiveHelpfulHint(Server &server)
     if (best_so_far == 0) return false;
 
     /* Give the hint. */
+    std::string hinted_player = (player_to_hint == 0) ? "You" : ("P" + std::to_string(player_to_hint));
     if (color_to_hint != -1) {
+        std::string hinted_color;
+        switch (color_to_hint) {
+            case 0: hinted_color = "r";
+            case 1: hinted_color = "w";
+            case 2: hinted_color = "y";
+            case 3: hinted_color = "g";
+            case 4: hinted_color = "b";
+        }
         server.pleaseGiveColorHint(player_to_hint, Color(color_to_hint));
+        server.moveExplanation = "The player gave a color hint to " + hinted_player + 
+                                 " about " + hinted_color + " cards. This hint identifies playable cards.";
     } else if (value_to_hint != -1) {
         server.pleaseGiveValueHint(player_to_hint, Value(value_to_hint));
+        server.moveExplanation = "The player gave a value hint to " + hinted_player + 
+                                 " about " + std::to_string(value_to_hint) + "s. This hint identifies playable cards.";
     } else {
         assert(false);
     }
@@ -289,7 +304,11 @@ void SimpleBot::pleaseMakeMove(Server &server)
         const int numPlayers = server.numPlayers();
         const int right_partner = (me_ + numPlayers - 1) % numPlayers;
         server.pleaseGiveValueHint(right_partner, server.handOfPlayer(right_partner)[0].value);
+        server.moveExplanation = "The player couldn't play or give a useful hint, and discarding is not allowed as all hint tokens are available. " 
+                                 "They gave a value hint about the oldest card of the next player as a default action.";
     } else {
         server.pleaseDiscard(0);
+        server.moveExplanation = "The player couldn't play or give a useful hint, so they discarded their oldest card. " 
+                                 "For this player, this is a safe strategy when no better options are available.";
     }
 }

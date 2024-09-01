@@ -76,11 +76,12 @@ def run_command(command, output_file):
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 bots = ['SimpleBot', 'ValueBot', 'HolmesBot', 'SmartBot', 'InfoBot', 'CheatBot'] 
+
 # Run each command and capture its output
 for bot in bots:
-    for num_players in range(2,5):
-        command = f'unbuffer python eval_bot.py {bot} --players {num_players} --games 38500'
-        output_file = f'output_{bot}_{num_players}.txt'
+    for i in range(2,5): 
+        command = f'unbuffer python eval_bot.py {bot} --players 2 --games 38500 --qa 1'
+        output_file = f'output_{bot}_{i-1}.txt'
         run_command(command, output_file)
         print(f"Executed command '{command}' and saved output to '{output_file}'.")
 

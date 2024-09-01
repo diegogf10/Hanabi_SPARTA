@@ -82,7 +82,7 @@ public:
 };
 
 /* Bots may assume that these correspond to the indices 0..4. */
-typedef enum: int8_t { RED=0, ORANGE, YELLOW, GREEN, BLUE, INVALID_COLOR } Color;
+typedef enum: int8_t { RED=0, WHITE, YELLOW, GREEN, BLUE, INVALID_COLOR } Color;
 constexpr int NUMCOLORS = 5;
 
 /* Bots may assume that these correspond to their integer values. */
@@ -176,6 +176,9 @@ public:
 
     /* Seed the random number generator. */
     void srand(unsigned int seed);
+
+    /* Set the qa flag value. */
+    void sqa(unsigned int qa);
 
     /* Set up a new game, using numPlayers player-bots as created
      * by repeated calls to botFactory.create(i,numPlayers). Then
@@ -364,8 +367,11 @@ public:
       return log_;
     }
 
-    /*================= PRIVATE MEMBERS ======================*/
     int seed_;
+    int qa_;
+    std::string moveExplanation;
+
+    /*================= PRIVATE MEMBERS ======================*/
 protected:
     /* Administrivia */
     std::ostream *log_;

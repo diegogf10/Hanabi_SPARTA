@@ -26,4 +26,5 @@ void BlindBot::pleaseMakeMove(Server &server)
     /* Just try to play a random card from my hand. */
     int random_index = std::rand() % server.sizeOfHandOfPlayer(server.whoAmI());
     server.pleasePlay(random_index);
+    server.moveExplanation = "The player seems to be playing a random card without considering hints or game state. This strategy will likely result in incorrect moves most of the time, potentially causing loss of life tokens or missed opportunities.";
 }

@@ -478,6 +478,9 @@ bool HolmesBot::maybePlayLowestPlayableCard(Server &server)
     /* If I found a card to play, play it. */
     if (best_index != -1) {
         server.pleasePlay(best_index);
+        server.moveExplanation = "The player played their lowest value playable card (in this case, value " + 
+                                 (best_value == -1) ? "was unknown but the player could infer that the card is playable based on the game state" : std::to_string(best_value) + 
+                                 "). This efficient play builds fireworks from the bottom up, maximizing future play options.";
         return true;
     }
 
@@ -490,6 +493,9 @@ bool HolmesBot::maybeDiscardWorthlessCard(Server &server)
         const CardKnowledge &knol = handKnowledge_[me_][i];
         if (knol.isWorthless) {
             server.pleaseDiscard(i);
+            server.moveExplanation = "The player discarded a card known to be worthless. "
+                                     "This is a safe discard that doesn't risk losing valuable cards "
+                                     "and regains a hint token.";
             return true;
         }
     }
@@ -594,10 +600,22 @@ bool HolmesBot::maybeGiveValuableWarning(Server &server)
     if (server.hintStonesRemaining() == 0) return false;
 
     Hint bestHint = bestHintForPlayer(server, player_to_warn);
+    std::string hinted_color;
+    switch (bestHint.color) {
+        case 0: hinted_color = "r";
+        case 1: hinted_color = "w";
+        case 2: hinted_color = "y";
+        case 3: hinted_color = "g";
+        case 4: hinted_color = "b";
+        case -1: hinted_color = "invalid";
+    };
     if (bestHint.information_content > 0) {
         /* Excellent; we found a hint that will cause him to play a card
          * instead of discarding. */
         bestHint.give(server);
+        server.moveExplanation = "The player gave a hint to warn about a valuable card. They hinted about " +
+                                 (bestHint.color != -1 ? ("color " + hinted_color) : ("value " + std::to_string(bestHint.value))) + ". This prevents " +
+                                 (player_to_warn == 0 ? "You" : ("player P" + std::to_string(player_to_warn))) + " from discarding an important card.";
         return true;
     }
 
@@ -609,6 +627,9 @@ bool HolmesBot::maybeGiveValuableWarning(Server &server)
     }
 
     server.pleaseGiveValueHint(player_to_warn, targetCard.value);
+    server.moveExplanation = "The player gave a direct value hint to warn about a valuable card (value "
+                             + std::to_string(targetCard.value) + ") to" + (player_to_warn == 0 ? "You" : ("player P" + std::to_string(player_to_warn))) + 
+                             ". This is a last resort to prevent discarding an important card.";
     return true;
 }
 
@@ -629,7 +650,22 @@ bool HolmesBot::maybeGiveHelpfulHint(Server &server)
     if (bestHint.information_content <= 0) return false;
 
     /* Give the hint. */
+    std::string hinted_color;
+    switch (bestHint.color) {
+        case 0: hinted_color = "r";
+        case 1: hinted_color = "w";
+        case 2: hinted_color = "y";
+        case 3: hinted_color = "g";
+        case 4: hinted_color = "b";
+        case -1: hinted_color = "invalid";
+    };
     bestHint.give(server);
+    server.moveExplanation = "The player gave the most informative hint possible. They hinted about " +
+                             (bestHint.color != -1 ? ("color " + hinted_color) : ("value " + std::to_string(bestHint.value))) +
+                             " to" + (bestHint.to == 0 ? "You" : ("player P" + std::to_string(bestHint.to))) + 
+                             ". This hint provides crucial information about " + 
+                             std::to_string(bestHint.information_content) + 
+                             " card(s), likely enabling plays or preventing mistakes.";
     return true;
 }
 
@@ -654,6 +690,12 @@ bool HolmesBot::maybePlayMysteryCard(Server &server)
                 continue;
             }
             server.pleasePlay(i);
+            server.moveExplanation = "The player took a calculated risk by playing a random card. "
+                                     "With " + std::to_string(server.cardsRemainingInDeck()) + 
+                                     " cards left in the deck and " + 
+                                     std::to_string(server.mulligansRemaining()) + 
+                                     " life tokens remaining, this risky play could potentially "
+                                     "score crucial points in the endgame.";
             return true;
         }
     }
@@ -667,6 +709,9 @@ bool HolmesBot::maybeDiscardOldCard(Server &server)
         assert(!knol.isPlayable);
         if (knol.isValuable) continue;
         server.pleaseDiscard(i);
+        server.moveExplanation = "The player discarded their oldest (leftmost) non-valuable card. "
+                                 "This is a conservative discard strategy when no better options "
+                                 "are available, minimizing the risk of losing important cards.";
         return true;
     }
     /* I didn't find anything I was willing to discard. */
@@ -697,6 +742,9 @@ void HolmesBot::pleaseMakeMove(Server &server)
         const int numPlayers = server.numPlayers();
         const int right_partner = (me_ + numPlayers - 1) % numPlayers;
         server.pleaseGiveValueHint(right_partner, server.handOfPlayer(right_partner)[0].value);
+        server.moveExplanation = "The player gave a value hint about the oldest card of the next player in turn (" +
+                                 + (right_partner == 0) ? "You" : ("P" + std::to_string(right_partner)) +
+                                 "). This is a default action when no better moves are available and discarding is not allowed.";
     } else {
         if (maybeDiscardWorthlessCard(server)) return;
         if (maybeDiscardOldCard(server)) return;
@@ -712,6 +760,10 @@ void HolmesBot::pleaseMakeMove(Server &server)
             }
         }
         server.pleaseDiscard(best_index);
+        server.moveExplanation = "The player was forced to discard a valuable card. All cards in hand are valuable, "
+                                 "so they chose to discard the highest-valued card (value " + 
+                                 std::to_string(handKnowledge_[me_][best_index].value()) + 
+                                 "). This minimizes the impact on lower-value fireworks and preserves future play options.";
     }
 }
 
