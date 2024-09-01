@@ -20,7 +20,7 @@ using namespace Hanabi;
 ////////////////////////////////////////////////////////////////////////////////
 
 std::string cur_botname;
-std::tuple<std::shared_ptr<Server>, PyBot*, std::thread> start_game(std::string botname, int seed) {
+std::tuple<std::shared_ptr<Server>, PyBot*, std::thread> start_game(std::string botname, int seed, int qa) {
   cur_botname = botname;
   std::vector<Bot*> players(2);
   auto gui_player = Params::getParameterInt("GUI_PLAYER", 0);
@@ -38,6 +38,7 @@ std::tuple<std::shared_ptr<Server>, PyBot*, std::thread> start_game(std::string 
   auto server = std::make_shared<Server>();
   server->setLog(&std::cerr);
   server->srand(seed);
+  server->sqa(qa);
   std::thread thread(
     [server, players, pybot](){ server->runGame(players, std::vector<Card>()); if (!pybot->gameOver_) pybot->wakeUp(); }
   );
@@ -136,7 +137,8 @@ void eval_bot(
   int players,
   int games,
   int log_every,
-  int seed
+  int seed,
+  int qa
 ) {
     // special case slurm runs
     if (seed < 0 && std::getenv("SLURM_PROCID")) {
@@ -157,6 +159,7 @@ void eval_bot(
     auto botFactory = getBotFactory(botname);
 
     server.srand(seed);
+    server.sqa(qa);
 
     for (int i=0; i < games; ++i) {
         int score = server.runGame(*botFactory, players);
@@ -190,13 +193,15 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
       py::arg("players")=2,
       py::arg("games")=1000,
       py::arg("log_every")=100,
-      py::arg("seed")=-1
+      py::arg("seed")=-1,
+      py::arg("qa")
   );
 
   // GUI interface code
   m.def("start_game", &start_game, py::return_value_policy::reference,
       py::arg("botname"),
-      py::arg("seed")=-1);
+      py::arg("seed")=-1,
+      py::arg("qa"));
   m.def("end_game", &end_game);
   m.def("get_botname", &get_botname);
   m.def("get_search_thresh", &get_search_thresh);
@@ -252,7 +257,7 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
 
   py::enum_<Color>(m, "Color", py::arithmetic())
     .value("RED", Color::RED)
-    .value("ORANGE", Color::ORANGE)
+    .value("WHITE", Color::WHITE)
     .value("YELLOW", Color::YELLOW)
     .value("GREEN", Color::GREEN)
     .value("BLUE", Color::BLUE)

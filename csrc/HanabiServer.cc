@@ -97,7 +97,7 @@ static std::string colorname(Hanabi::Color color)
 {
     switch (color) {
         case Hanabi::RED: return "r";
-        case Hanabi::ORANGE: return "o";
+        case Hanabi::WHITE: return "w";
         case Hanabi::YELLOW: return "y";
         case Hanabi::GREEN: return "g";
         case Hanabi::BLUE: return "b";
@@ -191,6 +191,11 @@ void Server::srand(unsigned int seed)
 {
     this->seed_ = seed;
     this->rand_.seed(seed);
+}
+
+void Server::sqa(unsigned int qa) 
+{
+    this->qa_ = qa;
 }
 
 template<class It, class Gen>
@@ -307,33 +312,36 @@ int Server::runToCompletion() {
     this->pleaseUpdateValuableHints();
 
     //In game Q&A logic
-    if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
-        Question question = this->generateRandomQuestion();
-        Answer answer = processQuestion(question);
-        if (question.getType() == Question::Type::COLOR) {
-            (*log_) << "Is your " 
-                    << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card "
-                    << colorname(question.getColor()) << "?\n";
-        } else {
-            (*log_) << "Is your " 
-                    << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
-                    << question.getNumber() << "?\n";
-        }
-        (*log_) << "answer: " << answer.answerAsString() << "\n";
-        //Log different variables for dataset analysis later on
-        (*log_) << "cards_remaining: " << questionRound << "\n";
-        (*log_) << "question_position: " << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << "\n";
-        if (question.getType() == Question::Type::COLOR) {
-            (*log_) << "question_value: " << colorname(question.getColor()) << "\n";
-         } else {
-            (*log_) << "question_value: " << question.getNumber() << "\n";
-        }
-        // End the game after generating the question and logging the answer
-        break;
-    } 
-    
+    if (this->qa_) {
+        if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
+            Question question = this->generateRandomQuestion();
+            Answer answer = processQuestion(question);
+            if (question.getType() == Question::Type::COLOR) {
+                (*log_) << "Is your " 
+                        << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card "
+                        << colorname(question.getColor()) << "?\n";
+            } else {
+                (*log_) << "Is your " 
+                        << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
+                        << question.getNumber() << "?\n";
+            }
+            (*log_) << "answer: " << answer.answerAsString() << "\n";
+            //Log different variables for dataset analysis later on
+            (*log_) << "cards_remaining: " << questionRound << "\n";
+            (*log_) << "question_position: " << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << "\n";
+            if (question.getType() == Question::Type::COLOR) {
+                (*log_) << "question_value: " << colorname(question.getColor()) << "\n";
+            } else {
+                (*log_) << "question_value: " << question.getNumber() << "\n";
+            }
+            // End the game after generating the question and logging the answer
+            break;
+        } 
+    }
 
     players_[activePlayer_]->pleaseMakeMove(*this);  /* make a move */
+    //(*log_) << moveExplanation << "\n";
+    
     // added this short-circuit in case you forcibly end the game, toa void asserts and waiting
     if (this->gameOver()) break;
     HANABI_SERVER_ASSERT(movesFromActivePlayer_ != 0, "bot failed to respond to pleaseMove()");
@@ -900,10 +908,8 @@ void Server::pleaseAddValueHint(int giverId, int receiverId, int cardPosition, b
     hints_.push_back(newHint);
 }
 
-//TODO: revise logic to update valuable hints. 1. Do we need to go through all hints? 2. Behaviour when player plays or discards a card - how should it affect existing valuable hints?
 //If a hint is given, it is added to the vector of hints as a valuable hint
-//If a card is played or discarded, two things happen: 1. Hint is not valuable anymore (negative or not). 2. Valuable hints about cards to the right of the of that card need to change its index (index - 1)
-//Redifine this function (or remove it if not necessary)
+//If a card is played or discarded, two things happen: 1. Hint is not valuable anymore (negative or not). 2. Valuable hints about cards to the right of that card need to change its index (index - 1)
 void Server::pleaseUpdateValuableHints() {
     for (auto& hint : hints_) {
         //Only check valuable hints. Once a hint is not valuable, it should not be considered anymore
