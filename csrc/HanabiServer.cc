@@ -311,8 +311,8 @@ int Server::runToCompletion() {
     //Update value of hints for consistency
     this->pleaseUpdateValuableHints();
 
-    //In game Q&A logic
-    if (this->qa_) {
+    //In-game Q&A logic for the agent's own cards (answers based on common knowledge that can be inferred from the game state -i.e. not every bot should know the correct answer)
+    if (this->qa_ == 1) {
         if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
             Question question = this->generateRandomQuestion();
             Answer answer = processQuestion(question);
@@ -337,6 +337,76 @@ int Server::runToCompletion() {
             // End the game after generating the question and logging the answer
             break;
         } 
+    //In-game Q&A logic for the partner's cards
+    } else if (this->qa_ == 2) {
+        if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
+            Question question = this->generateRandomQuestion();
+            //Look at relevant card in P1's hand
+            Card answer_card = cheatGetHand(1)[question.getCardPosition()];
+            if (question.getType() == Question::Type::COLOR) {
+                (*log_) << "Is the " 
+                        << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card of P1 "
+                        << colorname(question.getColor()) << "?\n";
+                (*log_) << "answer: " << ((answer_card.color == question.getColor()) ? "Yes" : "No") << "\n";
+            } else {
+                (*log_) << "Is the " 
+                        << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card of P1 a "
+                        << question.getNumber() << "?\n";
+                (*log_) << "answer: " << ((int(answer_card.value) == question.getNumber()) ? "Yes" : "No") << "\n";
+
+            }
+            //Log different variables for dataset analysis later on
+            (*log_) << "cards_remaining: " << questionRound << "\n";
+            (*log_) << "question_position: " << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << "\n";
+            if (question.getType() == Question::Type::COLOR) {
+                (*log_) << "question_value: " << colorname(question.getColor()) << "\n";
+            } else {
+                (*log_) << "question_value: " << question.getNumber() << "\n";
+            }
+            // End the game after generating the question and logging the answer
+            break;
+        }
+    //In-game Q&A logic for piles
+    } else if (this->qa_ == 3) {
+        if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
+            Color pile_color = this->generatePileQuestion();
+            //Look at the current size of the pile
+            int pile_score = pileOf(pile_color).size_;
+            (*log_) << "What is the current score of the " 
+                    << colorname(pile_color) << " pile?" << "\n";
+            (*log_) << "answer: " << pile_score << "\n";
+            //Log different variables for dataset analysis later on
+            (*log_) << "cards_remaining: " << questionRound << "\n";
+            (*log_) << "question_pile: " << colorname(pile_color) << "\n";
+
+            // End the game after generating the question and logging the answer
+            break;
+        }
+    //In-game Q&A logic for discards
+    } else if (this->qa_ == 4) {
+        if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
+            Card discard_card = this->generateDiscardQuestion();
+            //Look at the discards of the card
+            int num_discards = std::count(discards_.begin(), discards_.end(), discard_card);
+            (*log_) << "How many " 
+                    << int(discard_card.value) << colorname(discard_card.color)
+                    << " cards have been discarded?" << "\n";
+            (*log_) << "answer: " << num_discards << "\n";
+            //Log different variables for dataset analysis later on
+            (*log_) << "cards_remaining: " << questionRound << "\n";
+
+            // End the game after generating the question and logging the answer
+            break;
+        }
+    //In-game Q&A logic for cards remaining in deck
+    } else if (this->qa_ == 5) {
+        if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
+            (*log_) << "How many cards are currently remaining in the deck?" << "\n";
+            (*log_) << "answer: " << this->cardsRemainingInDeck() << "\n";
+
+            // End the game after generating the question and logging the answer
+            break;
+        }
     }
 
     players_[activePlayer_]->pleaseMakeMove(*this);  /* make a move */
@@ -986,6 +1056,25 @@ Question Server::generateRandomQuestion() {
         Value value = static_cast<Value>(valueDist(rng));
         return Question(this->activePlayer_, position, value);
     }
+}
+
+Color Server::generatePileQuestion() {
+    std::mt19937 rng(std::random_device{}());
+
+    std::uniform_int_distribution<int> colorDist(0, NUMCOLORS - 1);
+    return static_cast<Color>(colorDist(rng));
+}
+
+Card Server::generateDiscardQuestion() {
+    std::mt19937 rng(std::random_device{}());
+
+    std::uniform_int_distribution<int> colorDist(0, NUMCOLORS - 1);
+    Color color = static_cast<Color>(colorDist(rng));
+    std::uniform_int_distribution<int> valueDist(1, VALUE_MAX);
+    Value value = static_cast<Value>(valueDist(rng));
+
+    Card card = Card(color, value);
+    return card;
 }
 
 void Server::regainHintStoneIfPossible_()

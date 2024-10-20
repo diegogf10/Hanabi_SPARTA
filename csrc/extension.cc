@@ -12,6 +12,10 @@
 #include "PyBot.h"
 #include "SearchBot.h"
 
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
+
+namespace py = pybind11;
 using namespace Hanabi;
 
 
@@ -113,12 +117,17 @@ struct Statistics {
     int mulligansUsed[4];
 };
 
-static void dump_stats(std::string botname, Statistics stats)
+static void dump_stats(const std::vector<std::string>& botnames, Statistics stats)
 {
     const double dgames = stats.games;
     const int perfectGames = stats.scoreDistribution[25];
 
-    std::cout << "Over " << stats.games << " games, " << botname << " scored an average of "
+    std::cout << "Over " << stats.games << " games, bots (";
+    for (size_t i = 0; i < botnames.size(); ++i) {
+        if (i > 0) std::cout << ", ";
+        std::cout << botnames[i];
+    }
+    std::cout << ") scored an average of "
               << (stats.totalScore / dgames) << " points per game.\n";
     if (perfectGames != 0) {
         const double winRate = 100*(perfectGames / dgames);
@@ -133,8 +142,7 @@ static void dump_stats(std::string botname, Statistics stats)
 }
 
 void eval_bot(
-  std::string botname,
-  int players,
+  std::vector<std::string> botnames,
   int games,
   int log_every,
   int seed,
@@ -156,14 +164,25 @@ void eval_bot(
 
     Hanabi::Server server;
     server.setLog(&std::cerr);
-    auto botFactory = getBotFactory(botname);
+    std::vector<std::shared_ptr<Hanabi::BotFactory>> botFactories;
+    for (const auto& botname : botnames) {
+        botFactories.push_back(getBotFactory(botname));
+    }
+    int players = botnames.size();
 
     server.srand(seed);
     server.sqa(qa);
 
     for (int i=0; i < games; ++i) {
-        int score = server.runGame(*botFactory, players);
-        std::cout << "botname: " << botname << std::endl;
+        std::vector<Hanabi::Bot*> bots;
+        for (int i = 0; i < players; ++i) {
+            bots.push_back(botFactories[i]->create(i, players, server.handSize()));
+        }
+        int score = server.runGame(bots, std::vector<Hanabi::Card>());
+        for (auto bot : bots) {
+            delete bot;
+        }
+        //std::cout << "botname: " << botname << std::endl;
         std::cout << "Final score " << i << " : " << score << " bomb: "
                   << (server.mulligansRemaining() == 0 ? 1 : 0) << std::endl;
         assert(score == server.currentScore());
@@ -174,10 +193,10 @@ void eval_bot(
         stats.mulligansUsed[server.mulligansUsed()] += 1;
 
         if (i % log_every == 0) {
-          dump_stats(botname, stats);
+          dump_stats(botnames, stats);
         }
     }
-    dump_stats(botname, stats);
+    dump_stats(botnames, stats);
 
     Hanabi::getThreadPool().close();
 }
@@ -189,12 +208,11 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
   // test harness code
   // FIXME: make params configurable not just through env vars
   m.def("eval_bot", &eval_bot,
-      py::arg("botname"),
-      py::arg("players")=2,
-      py::arg("games")=1000,
-      py::arg("log_every")=100,
-      py::arg("seed")=-1,
-      py::arg("qa")
+    py::arg("botnames"),
+    py::arg("games")=1000,
+    py::arg("log_every")=100,
+    py::arg("seed")=-1,
+    py::arg("qa")
   );
 
   // GUI interface code

@@ -14,9 +14,6 @@ def parse_content_to_dict(content):
         'botname': '',
         'question': '',
         'answer': '',
-        'cards_remaining': '',
-        'question_position': '',
-        'question_value': ''
     })
     lines = content.splitlines()
     question_lines = []
@@ -27,12 +24,6 @@ def parse_content_to_dict(content):
             data['botname'] = line.split('botname: ')[1].strip()
         elif 'answer:' in line:
             data['answer'] = line.split('answer: ')[1].strip()
-        elif 'cards_remaining:' in line:
-            data['cards_remaining'] = line.split('cards_remaining: ')[1].strip()
-        elif 'question_position:' in line:
-            data['question_position'] = line.split('question_position: ')[1].strip()
-        elif 'question_value:' in line:
-            data['question_value'] = line.split('question_value: ')[1].strip()
         else:
             question_lines.append(line)
     
@@ -59,7 +50,7 @@ def process_file(file_path, json_id):
             result = sample[start_index:end_index + len('Final score')]
             parsed_data = parse_content_to_dict(result)
             # Check for the presence of all required fields as some complete games do not get to the Q&A logic
-            if all(parsed_data[field] not in [None, ''] for field in ['answer', 'cards_remaining', 'question_position', 'question_value']):
+            if all(parsed_data[field] not in [None, ''] for field in ['answer']):
                 # Add ID attribute at the beginning of the dictionary
                 parsed_data = OrderedDict([('id', json_id + i//2)] + list(parsed_data.items()))
                 json_objects.append(parsed_data)
@@ -75,25 +66,25 @@ def run_command(command, output_file):
 
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-bots = ['SimpleBot', 'ValueBot', 'HolmesBot', 'SmartBot', 'InfoBot', 'CheatBot'] 
-# Run each command and capture its output
-for bot in bots:
-    for i in range(2,5): 
-        command = f'unbuffer python eval_bot.py {bot} --players 2 --games 38500 --qa 1'
-        output_file = f'output_{bot}_{i-1}.txt'
-        run_command(command, output_file)
-        print(f"Executed command '{command}' and saved output to '{output_file}'.")
+# bots = ['SimpleBot', 'ValueBot', 'HolmesBot', 'SmartBot', 'InfoBot', 'CheatBot'] 
+# # Run each command and capture its output
+# for bot in bots:
+#     for i in range(2,5): 
+#         command = f'unbuffer python eval_bot.py {bot} --players 2 --games 10000 --qa 5'
+#         output_file = f'output_remcards_{bot}_{i-1}.txt'
+#         run_command(command, output_file)
+#         print(f"Executed command '{command}' and saved output to '{output_file}'.")
 
 # Process each file and collect all JSON objects
 all_json_objects = []
-for input_file_path in glob.glob('output_*.txt'):
+for input_file_path in glob.glob('output_2_players_remcards/output_*.txt'):
     json_id = len(all_json_objects)
     json_objects = process_file(input_file_path, json_id)
     all_json_objects.extend(json_objects)
     print(f"Processed '{input_file_path}'.")
 
 # Write all JSON objects to a single output file
-with open('output.json', 'w') as json_file:
+with open('output_2_players_remcards/output.json', 'w') as json_file:
     json.dump(all_json_objects, json_file, indent=4)
 
 print(f"Saved all results to 'output.json'.")

@@ -42,7 +42,8 @@ int CardKnowledge::value() const
 
 void CardKnowledge::setMustBe(Hanabi::Color color)
 {
-    assert(colors_[color] != NO);
+    //Comment to enable crossplay
+    //assert(colors_[color] != NO);
     for (Color k = RED; k <= BLUE; ++k) {
         colors_[k] = ((k == color) ? YES : NO);
     }
@@ -50,7 +51,8 @@ void CardKnowledge::setMustBe(Hanabi::Color color)
 
 void CardKnowledge::setMustBe(Hanabi::Value value)
 {
-    assert(values_[value] != NO);
+    //Comment to enable crossplay
+    //assert(values_[value] != NO);
     for (int v = 1; v <= 5; ++v) {
         values_[v] = ((v == value) ? YES : NO);
     }
@@ -137,7 +139,8 @@ void ValueBot::makeThisValueWorthless(const Hanabi::Server &server, Value value)
         for (int index = 0; index < server.sizeOfHandOfPlayer(player); ++index) {
             ValueB::CardKnowledge &knol = handKnowledge_[player][index];
             if (knol.mustBe(value)) {
-                assert(!knol.isValuable);
+                //Comment to enable crossplay
+                //assert(!knol.isValuable);
                 knol.isWorthless = true;
             }
         }
@@ -163,11 +166,12 @@ void ValueBot::pleaseObserveBeforePlay(const Hanabi::Server &server, int from, i
 
     Card card = server.activeCard();
 
-    assert(!handKnowledge_[from][card_index].isWorthless);
-    if (handKnowledge_[from][card_index].isValuable) {
-        /* We weren't wrong about this card being valuable, were we? */
-        assert(this->cardCount_[card.color][card.value] == card.count()-1);
-    }
+    //Comment to enable crossplay
+    //assert(!handKnowledge_[from][card_index].isWorthless);
+    // if (handKnowledge_[from][card_index].isValuable) {
+    //     /* We weren't wrong about this card being valuable, were we? */
+    //     assert(this->cardCount_[card.color][card.value] == card.count()-1);
+    // }
 
     this->invalidateKnol(from, card_index);
 
@@ -199,16 +203,19 @@ void ValueBot::pleaseObserveColorHint(const Hanabi::Server &server, int /*from*/
     Pile pile = server.pileOf(color);
     int value = pile.size() + 1;
 
-    assert(1 <= value && value <= 5);
+    //Comment to enable crossplay
+    //assert(1 <= value && value <= 5);
 
     for (int i=0; i < card_indices.size(); ++i) {
         ValueB::CardKnowledge &knol = handKnowledge_[to][card_indices[i]];
         knol.setMustBe(color);
-        if (knol.value() == -1) {
+        //Check that value is less than 6 to prevent issues with crossplay and ValueBot's strategy
+        if (knol.value() == -1 && value <= 5) {
             knol.setMustBe(Value(value));
         }
         const int count = cardCount_[color][knol.value()];
-        if (count == -1) {
+        //If the next value of the pile is greater than 5, deduce that card is worthless
+        if (count == -1 || value > 5) {
             knol.isWorthless = true;
         } else {
             if (value == knol.value()) {
@@ -255,11 +262,12 @@ void ValueBot::pleaseObserveValueHint(const Hanabi::Server &server, int from, in
     if (isHintStoneReclaim) {
         return;
     }
+    //Comment to enable crossplay
+    //assert(!isPointless);
 
-    assert(!isPointless);
-
-    if (isWarning) {
-        assert(discardIndex != -1);
+    if (isWarning && discardIndex != -1) {
+        //Comment to enable crossplay
+        //assert(discardIndex != -1);
         handKnowledge_[to][discardIndex].isValuable = true;
         if (value == lowestValue) {
             /* This card is valuable, i.e., not worthless; therefore it
@@ -427,10 +435,11 @@ bool ValueBot::maybeGiveValuableWarning(Server &server)
     }
 
     /* Oh no! Warn him before he discards it! */
-    assert(cardCount_[targetCard.color][targetCard.value] != -1);
-    assert(!handKnowledge_[player_to_warn][discardIndex].isValuable);
-    assert(!handKnowledge_[player_to_warn][discardIndex].isPlayable);
-    assert(!handKnowledge_[player_to_warn][discardIndex].isWorthless);
+    //Comment to enable crossplay
+    // assert(cardCount_[targetCard.color][targetCard.value] != -1);
+    // assert(!handKnowledge_[player_to_warn][discardIndex].isValuable);
+    // assert(!handKnowledge_[player_to_warn][discardIndex].isPlayable);
+    // assert(!handKnowledge_[player_to_warn][discardIndex].isWorthless);
     ValueB::Hint bestHint = bestHintForPlayer(server, player_to_warn);
     if (bestHint.information_content > 0) {
         /* Excellent; we found a hint that will cause him to play a card

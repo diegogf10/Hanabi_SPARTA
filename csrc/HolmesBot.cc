@@ -131,7 +131,8 @@ void CardKnowledge::update(const Server &server, const HolmesBot &bot)
                 const int total = (v == 1 ? 3 : (v == 5 ? 1 : 2));
                 const int played = bot.playedCount_[k][v];
                 const int held = bot.locatedCount_[k][v];
-                assert(played+held <= total || bot.permissive_);
+                //Comment to enable crossplay
+                //assert(played+held <= total || bot.permissive_);
                 if ((played+held >= total) ||
                     (isValuable && !bot.isValuable(server, Card(k,v))) ||
                     (isPlayable && !server.pileOf(k).nextValueIs(v)) ||
@@ -163,7 +164,8 @@ void CardKnowledge::update(const Server &server, const HolmesBot &bot)
     }
 
     /* Valuableness and playableness are orthogonal. */
-    assert(!this->isWorthless || bot.permissive_);
+    //Comment to enable crossplay
+    //assert(!this->isWorthless || bot.permissive_);
 
     if (!this->isValuable) {
         for (Color k = RED; k <= BLUE; ++k) {
@@ -328,11 +330,12 @@ void HolmesBot::pleaseObserveBeforePlay(const Hanabi::Server &server, int from, 
 
     Card card = server.activeCard();
 
-    assert(!handKnowledge_[from][card_index].isWorthless || permissive_);
-    if (handKnowledge_[from][card_index].isValuable) {
+    //Comment to enable crossplay
+    //assert(!handKnowledge_[from][card_index].isWorthless || permissive_);
+    //if (handKnowledge_[from][card_index].isValuable) {
         /* We weren't wrong about this card being valuable, were we? */
-        assert(this->isValuable(server, card) || permissive_);
-    }
+        //assert(this->isValuable(server, card) || permissive_);
+    //}
 
     if (server.pileOf(card.color).nextValueIs(card.value)) {
         /* This card is getting played, not discarded. */
@@ -359,13 +362,15 @@ void HolmesBot::pleaseObserveColorHint(const Hanabi::Server &server, int /*from*
     if (permissive_) {
       value = std::min(value, 5);
     }
-    assert(1 <= value && value <= 5);
+    //Comment to enable crossplay
+    //assert(1 <= value && value <= 5);
 
     for (int i=0; i < server.sizeOfHandOfPlayer(to); ++i) {
         CardKnowledge &knol = handKnowledge_[to][i];
         if (card_indices.contains(i)) {
             knol.setMustBe(color);
-            if (knol.value() == -1 && !knol.isWorthless) {
+            //Add value <= 5 to protect when pile is completed
+            if (knol.value() == -1 && !knol.isWorthless && value <= 5) {
                 knol.setMustBe(Value(value));
             }
         } else {
@@ -410,10 +415,11 @@ void HolmesBot::pleaseObserveValueHint(const Hanabi::Server &server, int from, i
         return;
     }
 
-    assert(!isPointless || permissive_);
+    //assert(!isPointless || permissive_);
 
     if (isWarning) {
-        assert(discardIndex != -1);
+        //Comment to enable crossplay
+        //(discardIndex != -1);
         handKnowledge_[to][discardIndex].isValuable = true;
         if (value == lowestPlayableValue_) {
             /* This card is valuable, i.e., not worthless; therefore it
@@ -586,9 +592,10 @@ bool HolmesBot::maybeGiveValuableWarning(Server &server)
     }
 
     /* Oh no! Warn him before he discards it! */
-    assert(!handKnowledge_[player_to_warn][discardIndex].isValuable);
-    assert(!handKnowledge_[player_to_warn][discardIndex].isPlayable);
-    assert(!handKnowledge_[player_to_warn][discardIndex].isWorthless);
+    //Comment to enable crossplay
+    //assert(!handKnowledge_[player_to_warn][discardIndex].isValuable);
+    //assert(!handKnowledge_[player_to_warn][discardIndex].isPlayable);
+    //assert(!handKnowledge_[player_to_warn][discardIndex].isWorthless);
 
     /* Sometimes we just can't give a hint. */
     if (server.hintStonesRemaining() == 0) return false;
@@ -646,7 +653,8 @@ bool HolmesBot::maybePlayMysteryCard(Server &server)
          * and hope we get lucky. */
         for (int i = myHandSize_ - 1; i >= 0; --i) {
             const CardKnowledge &knol = handKnowledge_[me_][i];
-            assert(!knol.isPlayable);  /* or we would have played it already */
+            //Comment to enable crossplay
+            //assert(!knol.isPlayable);  /* or we would have played it already */
             if (knol.isWorthless) continue;
             if (knol.color() != -1 && knol.value() != -1) {
                 /* A known card shouldn't be playable. */
@@ -706,7 +714,8 @@ void HolmesBot::pleaseMakeMove(Server &server)
          * to discard the one of them that will block our progress the least. */
         int best_index = 0;
         for (int i=0; i < myHandSize_; ++i) {
-            assert(handKnowledge_[me_][i].isValuable);
+            //Comment to enable crossplay
+            //assert(handKnowledge_[me_][i].isValuable);
             if (handKnowledge_[me_][i].value() > handKnowledge_[me_][best_index].value()) {
                 best_index = i;
             }

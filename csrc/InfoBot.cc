@@ -479,13 +479,16 @@ struct ModulusInformation {
 
     void cast_up(int m) {
         assert(modulus <= m);
-        assert(value < m);
+        //Comment to enable crossplay
+        //assert(value < m);
         modulus = m;
     }
 
     void cast_down(int m) {
         assert(modulus >= m);
-        assert(value < m);
+        //Enable crossplay
+        //assert(value < m);
+        value = value % m;
         modulus = m;
     }
 
@@ -1188,7 +1191,8 @@ public:
 
     void update_public_info_for_discard_or_play(GameView& view, int player, int index, Card card) {
         HandInfo& info = this->public_info[player];
-        assert(info[index].is_possible(card) || permissive_);
+        //Comment to enable crossplay
+        //assert(info[index].is_possible(card) || permissive_);
         info.erase(info.begin() + index);
 
         // push *before* incrementing public counts
@@ -1514,7 +1518,8 @@ public:
                 }
             }
             if (permissive_) value = std::max(value, 0);
-            assert(value != -1);
+            //Comment to enable crossplay
+            //assert(value != -1);
             this->update_from_hint_sum(ModulusInformation(known_useless_indices.size(), value), view);
         }
         this->update_public_info_for_discard_or_play(this->last_view, from, card_index, server.activeCard());

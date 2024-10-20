@@ -46,7 +46,9 @@ int CardKnowledge::value() const
 
 void CardKnowledge::setMustBe(Hanabi::Color color)
 {
-    assert(colors_[color] != NO);
+    //Remove assertion to enable crossplay between different bots 
+    //When playing different bots, each bot will follow its own conventions and that can lead to wrong assupmtions about cards that are corrected when a hint is received
+    //assert(colors_[color] != NO);
     for (Color k = RED; k <= BLUE; ++k) {
         colors_[k] = ((k == color) ? YES : NO);
     }
@@ -54,7 +56,9 @@ void CardKnowledge::setMustBe(Hanabi::Color color)
 
 void CardKnowledge::setMustBe(Hanabi::Value value)
 {
-    assert(values_[value] != NO);
+    //Remove assertion to enable crossplay between different bots 
+    //When playing different bots, each bot will follow its own conventions and that can lead to wrong assupmtions about cards that are corrected when a hint is received
+    //assert(values_[value] != NO);
     for (int v = 1; v <= 5; ++v) {
         values_[v] = ((v == value) ? YES : NO);
     }
@@ -108,13 +112,17 @@ void SimpleBot::pleaseObserveColorHint(const Hanabi::Server &server, int /*from*
     Pile pile = server.pileOf(color);
     int value = pile.size() + 1;
 
-    assert(1 <= value && value <= 5);
+    //Comment to enable crossplay
+    //assert(1 <= value && value <= 5);
 
     for (int i=0; i < card_indices.size(); ++i) {
-        CardKnowledge &knol = handKnowledge_[to][card_indices[i]];
-        knol.setMustBe(color);
-        knol.setMustBe(Value(value));
-        knol.isPlayable = true;
+        //Check that next value in the pile is not 5
+        if (value <= 5) {
+            CardKnowledge &knol = handKnowledge_[to][card_indices[i]];
+            knol.setMustBe(color);
+            knol.setMustBe(Value(value));
+            knol.isPlayable = true;
+        }
     }
 }
 

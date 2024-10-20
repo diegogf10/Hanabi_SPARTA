@@ -253,11 +253,13 @@ void CardKnowledge::computeIdentity() const
         }
     }
     if (color == -2) {
-      assert(this->bot_->permissive_);
+      //Comment to enable crossplay
+      //assert(this->bot_->permissive_);
       color = -1;
     }
     if (value == -2) {
-      assert(this->bot_->permissive_);
+      //Comment to enable crossplay
+      //assert(this->bot_->permissive_);
       value = -1;
     }
     color_ = color;
@@ -274,7 +276,8 @@ void CardKnowledge::computePossibilities() const
         }
     }
     if (possibilities < 1) { // confused
-      assert(this->bot_->permissive_);
+      //Comment to enable crossplay
+      //assert(this->bot_->permissive_);
       possibilities_ = 10;
       return;
     }
@@ -295,7 +298,8 @@ void CardKnowledge::computePlayable() const
         }
     }
     if (total_count < 1) { // confused
-      assert(this->bot_->permissive_);
+      //Comment to enable crossplay
+      //assert(this->bot_->permissive_);
       probabilityPlayable_ = 0.5;
       playable_ = MAYBE;
       return;
@@ -317,7 +321,8 @@ void CardKnowledge::computeValuable() const
         }
     }
     if (total_count < 1) { // confused
-      assert(this->bot_->permissive_);
+      //Comment to enable crossplay
+      //assert(this->bot_->permissive_);
       probabilityValuable_ = 0.5;
       valuable_ = MAYBE;
       return;
@@ -339,7 +344,8 @@ void CardKnowledge::computeWorthless() const
         }
     }
     if (total_count < 1) { // confused
-      assert(this->bot_->permissive_);
+      //Comment to enable crossplay
+      //assert(this->bot_->permissive_);
       probabilityWorthless_ = 0.5;
       worthless_ = MAYBE;
       return;
@@ -364,7 +370,8 @@ void CardKnowledge::update()
                 const int total = (v == 1 ? 3 : (v == 5 ? 1 : 2));
                 const int played = bot_->playedCount_[k][v];
                 const int held = (useMyEyesight ? bot_->eyesightCount_[k][v] : bot_->locatedCount_[k][v]);
-                assert(played+held <= total || this->bot_->permissive_);
+                //Comment to enable crossplay
+                //assert(played+held <= total || this->bot_->permissive_);
                 if (played+held >= total) {
                     this->cantBe_[k][v] = true;
                     recompute = true;
@@ -604,11 +611,12 @@ void SmartBot::pleaseObserveBeforeMove(const Server &server)
 
     this->updateEyesightCount();
 
-    for (Color k = RED; k <= BLUE; ++k) {
-        for (int v = 1; v <= 5; ++v) {
-            assert(this->locatedCount_[k][v] <= this->eyesightCount_[k][v] || permissive_);
-        }
-    }
+    //Comment to enable crossplay
+    // for (Color k = RED; k <= BLUE; ++k) {
+    //     for (int v = 1; v <= 5; ++v) {
+    //         assert(this->locatedCount_[k][v] <= this->eyesightCount_[k][v] || permissive_);
+    //     }
+    // }
 }
 
 void SmartBot::pleaseObserveBeforeDiscard(const Hanabi::Server &server, int from, int card_index)
@@ -662,13 +670,14 @@ void SmartBot::pleaseObserveBeforePlay(const Hanabi::Server &server, int from, i
 
     this->noValuableWarningWasGiven(from);
 
-#ifndef NDEBUG
-    assert(handKnowledge_[from][card_index].worthless() != YES || permissive_);
-    if (handKnowledge_[from][card_index].valuable() == YES) {
-        /* We weren't wrong about this card being valuable, were we? */
-        assert(this->isValuable(card) || permissive_);
-    }
-#endif
+//#ifndef NDEBUG
+    //Comment to enable crossplay
+    //assert(handKnowledge_[from][card_index].worthless() != YES || permissive_);
+//     if (handKnowledge_[from][card_index].valuable() == YES) {
+//         /* We weren't wrong about this card being valuable, were we? */
+//         assert(this->isValuable(card) || permissive_);
+//     }
+// #endif
 
     for (auto&& hand : handKnowledge_) {
         for (CardKnowledge &knol : hand) {
@@ -747,8 +756,9 @@ void SmartBot::pleaseObserveValueHint(const Hanabi::Server &server, int from, in
         card_indices.contains(discardIndex) &&
         handKnowledge_[to][discardIndex].couldBeValuableWithValue(value);
 
-    if (isWarning) {
-        assert(discardIndex != -1);
+    if (isWarning && discardIndex != -1) {
+        //Comment to enable crossplay
+        //assert(discardIndex != -1);
         handKnowledge_[to][discardIndex].setIsValuable(true);
     }
 
@@ -1003,9 +1013,10 @@ bool SmartBot::maybeGiveValuableWarning(Server &server)
     }
 
     /* Oh no! Warn him before he discards it! */
-    assert(handKnowledge_[player_to_warn][discardIndex].playable() != YES);
-    assert(handKnowledge_[player_to_warn][discardIndex].valuable() != YES);
-    assert(handKnowledge_[player_to_warn][discardIndex].worthless() != YES);
+    //Comment to enable crossplay
+    // assert(handKnowledge_[player_to_warn][discardIndex].playable() != YES);
+    // assert(handKnowledge_[player_to_warn][discardIndex].valuable() != YES);
+    // assert(handKnowledge_[player_to_warn][discardIndex].worthless() != YES);
 
     Hint bestHint = bestHintForPlayer(player_to_warn);
     if (bestHint.fitness > 0) {
@@ -1092,7 +1103,8 @@ bool SmartBot::maybePlayMysteryCard(Server &server)
         for (int i = handKnowledge_[me_].size() - 1; i >= 0; --i) {
             CardKnowledge eyeKnol = handKnowledge_[me_][i];
             eyeKnol.update<true>();
-            assert(eyeKnol.playable() != YES);  /* or we would have played it already */
+            //Comment to enable crossplay
+            //assert(eyeKnol.playable() != YES);  /* or we would have played it already */
             if (eyeKnol.playable() == MAYBE) {
                 double fitness = eyeKnol.probabilityPlayable();
                 if (fitness > best_fitness) {
@@ -1155,7 +1167,8 @@ void SmartBot::pleaseMakeMove(Server &server)
          * to discard the one of them that will block our progress the least. */
         int best_index = 0;
         for (int i=0; i < myHandSize_; ++i) {
-            assert(handKnowledge_[me_][i].valuable() == YES || permissive_);  // FIXME: I'm not sure why this should ever fire...
+            //Comment to enable crossplay
+            //assert(handKnowledge_[me_][i].valuable() == YES || permissive_);  // FIXME: I'm not sure why this should ever fire...
             if (handKnowledge_[me_][i].value() > handKnowledge_[me_][best_index].value()) {
                 best_index = i;
             }

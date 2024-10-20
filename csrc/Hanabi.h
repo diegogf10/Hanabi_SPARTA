@@ -292,6 +292,11 @@ public:
     /* Generate a question following a uniform distribution to ensure variability. */
     Question generateRandomQuestion();
 
+    /* Generate a question about one of the piles*/
+    Color generatePileQuestion();
+
+    Card generateDiscardQuestion();
+
     /* Provide final answer to question.
      * This function should be called right after the formulation of a question during the game */
     Answer processQuestion(Question question) const;

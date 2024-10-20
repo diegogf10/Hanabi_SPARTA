@@ -23,8 +23,7 @@ setup.py.
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='deepregret')
     # data
-    parser.add_argument('botname', default="SmartBot")
-    parser.add_argument('--players', type=int, default=2)
+    parser.add_argument('botnames', nargs='+', help='Names of bots to evaluate')
     parser.add_argument('--games', type=int, default=1000)
     parser.add_argument('--log_every', type=int, default=100)
     parser.add_argument('--seed', type=int, default=-1,
@@ -33,8 +32,7 @@ if __name__ == "__main__":
 
     opt = parser.parse_args()
     hanabi_lib.eval_bot(
-        opt.botname,
-        players=opt.players,
+        opt.botnames,
         games=opt.games,
         log_every=opt.log_every,
         seed=opt.seed,

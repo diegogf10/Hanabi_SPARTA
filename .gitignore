@@ -6,3 +6,6 @@ hanabi_lib.egg-info
 *.json
 env
 .vscode
+post_processing_openai.py
+output.py
+post_processing_data.py
