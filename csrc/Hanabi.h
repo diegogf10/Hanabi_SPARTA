@@ -404,6 +404,7 @@ protected:
     void regainHintStoneIfPossible_(void);
     void loseMulligan_(void);
     void logHands_(void) const;
+    void logAllHands_(void) const;
     void logPiles_(void) const;
 };
 
@@ -424,6 +425,8 @@ public:
       virtual void pleaseObserveColorHint(const Server &, int from, int to, Color color, CardIndices card_indices) = 0;
       virtual void pleaseObserveValueHint(const Server &, int from, int to, Value value, CardIndices card_indices) = 0;
     virtual void pleaseObserveAfterMove(const Server &) = 0;
+    virtual std::map<std::string, std::string> handKnowledgeToMap() {return std::map<std::string, std::string>(); };
+    virtual void printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) {};
 
     /* Return a copy of this bot with identical state.
      * The clone object is unmanaged, and must be deleted by the caller. */

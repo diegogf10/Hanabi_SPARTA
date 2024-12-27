@@ -532,3 +532,12 @@ void ValueBot::pleaseMakeMove(Server &server)
         server.pleaseDiscard(best_index);
     }
 }
+
+std::map<std::string, std::string> ValueBot::handKnowledgeToMap() {
+    std::map<std::string, std::string> knowledgeMap;
+    return knowledgeMap;
+}
+
+void ValueBot::printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) {
+
+}

@@ -1536,6 +1536,14 @@ public:
         assert(this->me == server.whoAmI());
         this->last_view = GameView(server);
     }
+    std::map<std::string, std::string> handKnowledgeToMap() {
+        std::map<std::string, std::string> knowledgeMap;
+        return knowledgeMap;
+    }
+
+    void printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) {
+
+    }
 };
 
 std::unique_ptr<InfoBot> InfoBot::makeImpl(int index, int numPlayers, int handSize)

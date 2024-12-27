@@ -4,9 +4,11 @@ dist
 hanabi_lib.egg-info
 *.txt
 *.json
+*.jsonl
 env
 .vscode
 post_processing_openai.py
 output.py
 post_processing_data.py
 visualize_crossplay.py
+training_tests.py

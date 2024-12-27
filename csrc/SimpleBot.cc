@@ -5,6 +5,8 @@
 // LICENSE file in the root directory of this source tree.
 
 #include <cassert>
+#include <map>
+#include <iomanip>
 #include "Hanabi.h"
 #include "SimpleBot.h"
 #include "BotFactory.h"
@@ -299,5 +301,68 @@ void SimpleBot::pleaseMakeMove(Server &server)
         server.pleaseGiveValueHint(right_partner, server.handOfPlayer(right_partner)[0].value);
     } else {
         server.pleaseDiscard(0);
+    }
+}
+
+std::map<std::string, std::string> SimpleBot::handKnowledgeToMap() {
+    std::map<std::string, std::string> knowledgeMap;
+    const int numPlayers = handKnowledge_.size();
+    const int handSize = handKnowledge_[0].size();
+    std::vector<std::string> cardPositions;
+    if (handSize == 5) {
+        cardPositions = {"O", "SO", "M", "SN", "N"};
+    } else if (handSize == 4) {
+        cardPositions = {"O", "SO", "SN", "N"};
+    } else if (handSize == 3) {
+        cardPositions = {"O","M", "N"};
+    }   
+
+    for (int player = 0; player < numPlayers; ++player) {
+        for (int card = 0; card < handSize; ++card) {
+            CardKnowledge cardKnowledge = handKnowledge_[player][card];
+            std::string key = "P" + std::to_string(player) + " " + cardPositions[card];
+            std::ostringstream value;
+            
+            // Colors: R W Y G B
+            for (int c = 0; c < 5; ++c) {
+                Hanabi::Color color = static_cast<Hanabi::Color>(c);
+                value << (cardKnowledge.mustBe(color) ? "Y " :
+                          cardKnowledge.cannotBe(color) ? "N " : "M ");  // Added space after each value
+            }
+            
+            // Values: 1 2 3 4 5
+            for (int v = 1; v <= 5; ++v) {
+                value << (cardKnowledge.mustBe(Hanabi::Value(v)) ? "Y " :
+                          cardKnowledge.cannotBe(Hanabi::Value(v)) ? "N " : "M ");  // Added space after each value
+            }
+            
+            // Playable. SimpleBot does not have Valuable and Worthless card properties
+            value << (cardKnowledge.isPlayable ? "Y " : "N ");  
+            
+            knowledgeMap[key] = value.str();
+        }
+    }
+    
+    return knowledgeMap;
+}
+
+void SimpleBot::printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) {
+    std::vector<std::string> positions = {"O", "SO", "M", "SN", "N"};
+    
+    // Adjust header spacing to account for the extra spaces
+    std::cout << std::setw(6) << "Card " << " | "
+              << "R W Y G B | 1 2 3 4 5 | P V W" << std::endl;
+    std::cout << std::string(50, '-') << std::endl;  // Increased line length
+
+    for (int p = 0; p < 2; ++p) {
+        for (const auto& pos : positions) {
+            std::string key = "P" + std::to_string(p) + " " + pos;
+            if (knowledgeMap.find(key) != knowledgeMap.end()) {
+                std::cout << std::setw(6) << key << " | "
+                         << knowledgeMap.at(key).substr(0, 9) << " | "  // Adjusted substring lengths
+                         << knowledgeMap.at(key).substr(10, 9) << " | "  // to account for spaces
+                         << knowledgeMap.at(key).substr(20, 5) << std::endl;
+            }
+        }
     }
 }

@@ -27,3 +27,12 @@ void BlindBot::pleaseMakeMove(Server &server)
     int random_index = std::rand() % server.sizeOfHandOfPlayer(server.whoAmI());
     server.pleasePlay(random_index);
 }
+
+std::map<std::string, std::string> BlindBot::handKnowledgeToMap() {
+    std::map<std::string, std::string> knowledgeMap;
+    return knowledgeMap;
+}
+
+void BlindBot::printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) {
+
+}

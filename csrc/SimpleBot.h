@@ -51,4 +51,6 @@ class SimpleBot final : public Hanabi::Bot {
       void pleaseObserveColorHint(const Hanabi::Server &, int from, int to, Hanabi::Color color, Hanabi::CardIndices card_indices) override;
       void pleaseObserveValueHint(const Hanabi::Server &, int from, int to, Hanabi::Value value, Hanabi::CardIndices card_indices) override;
     void pleaseObserveAfterMove(const Hanabi::Server &) override;
+    std::map<std::string, std::string> handKnowledgeToMap() override;
+    void printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) override;
 };

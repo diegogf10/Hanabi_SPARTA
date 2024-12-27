@@ -330,3 +330,12 @@ void CheatBot::pleaseMakeMove(Server &server)
     assert(server.hintStonesRemaining() == 0);  /* because maybeTemporize() failed */
     discardHighestCard(server);
 }
+
+std::map<std::string, std::string> CheatBot::handKnowledgeToMap() {
+    std::map<std::string, std::string> knowledgeMap;
+    return knowledgeMap;
+}
+
+void CheatBot::printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) {
+
+}

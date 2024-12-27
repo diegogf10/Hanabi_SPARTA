@@ -724,6 +724,15 @@ void HolmesBot::pleaseMakeMove(Server &server)
     }
 }
 
+std::map<std::string, std::string> HolmesBot::handKnowledgeToMap() {
+    std::map<std::string, std::string> knowledgeMap;
+    return knowledgeMap;
+}
+
+void HolmesBot::printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) {
+
+}
+
 HolmesBot *HolmesBot::clone() const {
   HolmesBot *b = new HolmesBot(me_, handKnowledge_.size(), handKnowledge_[0].size());
   b->me_ = this->me_;

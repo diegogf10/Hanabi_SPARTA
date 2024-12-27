@@ -38,6 +38,12 @@ class InfoBot : public Hanabi::Bot {
         return impl_->pleaseObserveValueHint(server, from, to, value, card_indices);
     }
     void pleaseObserveAfterMove(const Hanabi::Server&) override {}
+    std::map<std::string, std::string> handKnowledgeToMap() override {
+        return impl_->handKnowledgeToMap();
+    }
+    void printHandKnowledge(const std::map<std::string, std::string>& knowledgeMap) override {
+        return impl_->printHandKnowledge(knowledgeMap);
+    }
     virtual ~InfoBot() = default;
 
     Bot *clone() const override {

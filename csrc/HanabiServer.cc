@@ -73,7 +73,7 @@ static std::string nth(int n, int total)
     } else {
         switch (n) {
             case 0: return "O";
-            case 1: return "N";
+            case 1: return "M";
             default: assert(n == 2); return "N";
         }
     }
@@ -316,24 +316,33 @@ int Server::runToCompletion() {
         if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
             Question question = this->generateRandomQuestion();
             Answer answer = processQuestion(question);
-            if (question.getType() == Question::Type::COLOR) {
-                (*log_) << "Is your " 
-                        << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card "
-                        << colorname(question.getColor()) << "?\n";
-            } else {
-                (*log_) << "Is your " 
-                        << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
-                        << question.getNumber() << "?\n";
-            }
-            (*log_) << "answer: " << answer.answerAsString() << "\n";
-            //Log different variables for dataset analysis later on
-            (*log_) << "cards_remaining: " << questionRound << "\n";
-            (*log_) << "question_position: " << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << "\n";
-            if (question.getType() == Question::Type::COLOR) {
-                (*log_) << "question_value: " << colorname(question.getColor()) << "\n";
-            } else {
-                (*log_) << "question_value: " << question.getNumber() << "\n";
-            }
+            //std::map<std::string, std::string> handKnowledgeMain = players_[activePlayer_]->handKnowledgeToMap();
+            //std::map<std::string, std::string> handKnowledgePartner = players_[activePlayer_+1]->handKnowledgeToMap();
+            // if (question.getType() == Question::Type::COLOR) {
+            //     (*log_) << "Is your " 
+            //             << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card "
+            //             << colorname(question.getColor()) << "?\n";
+            // } else {
+            //     (*log_) << "Is your " 
+            //             << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << " card a "
+            //             << question.getNumber() << "?\n";
+            // }
+            // (*log_) << "answer: " << answer.answerAsString() << "\n";
+            //Log different variables for data analysis later on
+            // (*log_) << "hand_knowledge P" << activePlayer_ << ": \n";  
+            // players_[activePlayer_]->printHandKnowledge(handKnowledgeMain);
+            // (*log_) << "hand_knowledge P" << activePlayer_+1 << ": \n";
+            // players_[activePlayer_+1]->printHandKnowledge(handKnowledgePartner);
+            // this->logAllHands_();
+            // this->logPiles_();
+            // (*log_) << "discards: " << this->discardsAsString()<< "\n"; 
+            (*log_) << "cards_remaining: " << this->cardsRemainingInDeck() << "\n";
+            // (*log_) << "question_position: " << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << "\n";
+            // if (question.getType() == Question::Type::COLOR) {
+            //     (*log_) << "question_value: " << colorname(question.getColor()) << "\n";
+            // } else {
+            //     (*log_) << "question_value: " << question.getNumber() << "\n";
+            // }
             // End the game after generating the question and logging the answer
             break;
         } 
@@ -716,11 +725,11 @@ void Server::pleaseDiscard(int index)
     if (log_) {
         if (activePlayer_ == 0) {
             (*log_) << "You" 
-                << " discard your " << nth(index, hands_[activePlayer_].size())
+                << " discarded your " << nth(index, hands_[activePlayer_].size())
                 << " card (" << discardedCard.toString() << "). ";
         } else {
             (*log_) << "P" << activePlayer_
-                << " discards his " << nth(index, hands_[activePlayer_].size())
+                << " discarded his " << nth(index, hands_[activePlayer_].size())
                 << " card (" << discardedCard.toString() << "). ";
         }
     }
@@ -733,10 +742,10 @@ void Server::pleaseDiscard(int index)
         hands_[activePlayer_].push_back(replacementCard);
         if (log_) {
             if (activePlayer_ == 0) {
-                (*log_) << "You draw a card\n";
+                (*log_) << "You drew a card\n";
             } else {
                 (*log_) << "P" << activePlayer_
-                    << " draws card " << replacementCard.toString() << "\n";
+                    << " drew card " << replacementCard.toString() << "\n";
             }   
         }
     }
@@ -777,11 +786,11 @@ void Server::pleasePlay(int index)
     if (pile.nextValueIs(selectedCard.value)) {
         if (log_) {
             if (activePlayer_ == 0) {
-                (*log_) << "You play your " << nth(index, hands_[activePlayer_].size())
+                (*log_) << "You played your " << nth(index, hands_[activePlayer_].size())
                     << " card (" << selectedCard.toString() << "). ";
             } else {
                 (*log_) << "P" << activePlayer_
-                    << " plays his " << nth(index, hands_[activePlayer_].size())
+                    << " played his " << nth(index, hands_[activePlayer_].size())
                     << " card (" << selectedCard.toString() << "). ";
             }
         }
@@ -794,14 +803,14 @@ void Server::pleasePlay(int index)
         /* The card was unplayable! */
         if (log_) {
             if (activePlayer_ == 0) {
-                (*log_) << "You play your " << nth(index, hands_[activePlayer_].size())
+                (*log_) << "You played your " << nth(index, hands_[activePlayer_].size())
                     << " card (" << selectedCard.toString() << ")"
-                    << " but fail. ";
+                    << " but failed. ";
             } else {
                 (*log_) << "P" << activePlayer_
-                    << " plays his " << nth(index, hands_[activePlayer_].size())
+                    << " played his " << nth(index, hands_[activePlayer_].size())
                     << " card (" << selectedCard.toString() << ")"
-                    << " but fails. ";
+                    << " but failed. ";
             }
         }
         discards_.push_back(selectedCard);
@@ -816,12 +825,14 @@ void Server::pleasePlay(int index)
         hands_[activePlayer_].push_back(replacementCard);
         if (log_) {
             if (activePlayer_ == 0) {
-                (*log_) << "You draw a card\n";
+                (*log_) << "You drew a card\n";
             } else {
                 (*log_) << "P" << activePlayer_
-                    << " draws card " << replacementCard.toString() << "\n";
+                    << " drew card " << replacementCard.toString() << "\n";
             }   
         }
+    } else {
+        (*log_) << "\n";
     }
 
     this->logPiles_();
@@ -1169,7 +1180,22 @@ void Server::logHands_() const
 {
     if (log_) {
         (*log_) << "Hands:";
-        for (int i=1; i < numPlayers_; ++i) {
+        for (int i=0; i < numPlayers_; ++i) {
+            (*log_) << " P" << i << " cards are";
+            for (int j=0; j < (int)hands_[i].size(); ++j) {
+                (*log_) << (j ? "," : " ") << hands_[i][j].toString();
+            }
+            (*log_) << ";";
+        }
+        (*log_) << "\n";
+    }
+}
+
+void Server::logAllHands_() const
+{
+    if (log_) {
+        (*log_) << "Hands:";
+        for (int i=0; i < numPlayers_; ++i) {
             (*log_) << " P" << i << " cards are";
             for (int j=0; j < (int)hands_[i].size(); ++j) {
                 (*log_) << (j ? "," : " ") << hands_[i][j].toString();
