@@ -41,6 +41,7 @@ setup(
             "csrc/BlindBot.cc",
             "csrc/ValueBot.cc",
             "csrc/MetaBot.cc",
+            "csrc/SignalBot.cc",
             "csrc/HanabiServer.cc",
             "csrc/BotUtils.cc",
         ] + OPTIONAL_SRC,
