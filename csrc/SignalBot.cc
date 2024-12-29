@@ -256,7 +256,7 @@ bool SignalBot::handleSignalPlay(Server& server) {
         [](const auto& a, const auto& b) { return a.second < b.second; }
     );
     
-    if (bestPlay != playConfidence.end() && bestPlay->second >= 0.95) {
+    if (bestPlay != playConfidence.end() && bestPlay->second >= 0.9) {
         server.pleasePlay(bestPlay->first);
         return true;
     }
