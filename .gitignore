@@ -2,6 +2,7 @@ models/*.pth
 build
 dist
 hanabi_lib.egg-info
+hanabi_lib.cpython-311-darwin.so
 *.txt
 *.json
 *.jsonl
@@ -12,3 +13,4 @@ output.py
 post_processing_data.py
 visualize_crossplay.py
 training_tests.py
+csrc/NetworkBot.*
