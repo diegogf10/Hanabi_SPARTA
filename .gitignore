@@ -13,4 +13,3 @@ output.py
 post_processing_data.py
 visualize_crossplay.py
 training_tests.py
-csrc/NetworkBot.*

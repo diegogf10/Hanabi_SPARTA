@@ -42,7 +42,7 @@ setup(
             "csrc/ValueBot.cc",
             "csrc/MetaBot.cc",
             "csrc/SignalBot.cc",
-            "csrc/NetworkBot.cc",
+            "csrc/AdaptBot.cc", 
             "csrc/PileBot.cc",
             "csrc/HanabiServer.cc",
             "csrc/BotUtils.cc",

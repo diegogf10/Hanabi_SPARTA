@@ -99,7 +99,7 @@ Color PileBot::getMostAdvancedPlayablePile(const Hanabi::Server& server) const {
 
 bool PileBot::tryPlayPriorityCard(Hanabi::Server& server) {
     auto priorityPiles = getPrioritizedPiles(server);
-    const double play_threshold = (server.hintStonesRemaining() <= 2) ? 0.5 : 0.7;
+    const double play_threshold = (server.hintStonesRemaining() <= 2) ? 0.5 : 0.6;
 
     // Try to play cards that advance priority piles
     for (const auto& pile : priorityPiles) {
@@ -324,7 +324,7 @@ bool PileBot::trySafePriorityDiscard(Hanabi::Server& server) {
     }
     
     // If we're low on hint stones, we should discard more aggressively
-    const double safety_threshold = (server.hintStonesRemaining() <= 2) ? 0.3 : 0.5;
+    const double safety_threshold = (server.hintStonesRemaining() <= 2) ? 0.2 : 0.3;
     
     // Find the safest card to discard
     auto bestDiscard = std::max_element(
@@ -421,11 +421,28 @@ double PileBot::evaluateHintValue(int to, Color color) const {
     
     for (int i = 0; i < hand.size(); i++) {
         if (hand[i].color == color) {
-            // Higher value for cards in priority piles
-            for (const auto& pile : piles) {
-                if (pile.isActive && pile.color == color) {
-                    if (hand[i].value == pile.nextValueNeeded) value += 2.0;
-                    else if (hand[i].value > pile.nextValueNeeded) value += 0.5;
+            // Give extra points for ones that could start new piles
+            if (hand[i].value == 1 && server_->pileOf(color).size() == 0) {
+                value += 3.0;  // Higher bonus for starting new piles
+                
+                // Even more bonus if no other piles of this color are started
+                bool isNewColor = true;
+                for (const auto& pile : piles) {
+                    if (pile.color == color && pile.height > 0) {
+                        isNewColor = false;
+                        break;
+                    }
+                }
+                if (isNewColor) {
+                    value += 1.0;  // Additional bonus for completely new colors
+                }
+            } else {
+                // Original scoring for other cards
+                for (const auto& pile : piles) {
+                    if (pile.isActive && pile.color == color) {
+                        if (hand[i].value == pile.nextValueNeeded) value += 2.0;
+                        else if (hand[i].value > pile.nextValueNeeded) value += 0.5;
+                    }
                 }
             }
         }
@@ -439,12 +456,38 @@ double PileBot::evaluateHintValue(int to, Value value) const {
     const auto& hand = server_->handOfPlayer(to);
     auto piles = getPrioritizedPiles(*server_);
     
-    for (int i = 0; i < hand.size(); i++) {
-        if (hand[i].value == value) {
-            // Higher value for cards in priority piles
-            for (const auto& pile : piles) {
-                if (pile.isActive && value == pile.nextValueNeeded) {
-                    v += 2.0;
+    if (value == 1) {
+        // Special scoring for ones
+        for (int i = 0; i < hand.size(); i++) {
+            if (hand[i].value == 1) {
+                // Check if this one could start a new pile
+                if (server_->pileOf(hand[i].color).size() == 0) {
+                    v += 3.0;  // Base bonus for a potential new pile
+                    
+                    // Extra bonus if early in the game
+                    if (server_->cardsRemainingInDeck() > 30) {  // Adjust threshold as needed
+                        v += 1.0;
+                    }
+                    
+                    // Extra bonus if we have few active piles
+                    int activePiles = 0;
+                    for (const auto& pile : piles) {
+                        if (pile.height > 0) activePiles++;
+                    }
+                    if (activePiles < 3) {  // Adjust threshold as needed
+                        v += 1.0;
+                    }
+                }
+            }
+        }
+    } else {
+        // Original scoring for other values
+        for (int i = 0; i < hand.size(); i++) {
+            if (hand[i].value == value) {
+                for (const auto& pile : piles) {
+                    if (pile.isActive && value == pile.nextValueNeeded) {
+                        v += 2.0;
+                    }
                 }
             }
         }
