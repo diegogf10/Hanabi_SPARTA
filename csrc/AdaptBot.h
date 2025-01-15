@@ -6,7 +6,7 @@
 #include <memory>
 #include <deque>
 
-namespace NetB {
+namespace AdaB {
     // Classify different playing styles
     enum class PlayStyleType {
         AGGRESSIVE,    // Takes more risks, plays cards with less information
@@ -73,7 +73,7 @@ namespace NetB {
     };
 }
 
-class NetworkBot final : public Hanabi::Bot {
+class AdaptBot final : public Hanabi::Bot {
 private:
     // Core member variables
     int me_;
@@ -81,9 +81,9 @@ private:
     const Hanabi::Server* server_;
     
     // Track knowledge and patterns
-    std::vector<std::vector<NetB::CardKnowledge>> handKnowledge_;
-    std::vector<NetB::PlayStyle> playerStyles_;
-    std::vector<NetB::MoveHistory> moveHistory_;
+    std::vector<std::vector<AdaB::CardKnowledge>> handKnowledge_;
+    std::vector<AdaB::PlayStyle> playerStyles_;
+    std::vector<AdaB::MoveHistory> moveHistory_;
     
     // Strategy thresholds (adjusted based on partner's style)
     double playThreshold_;    // Minimum probability to play a card
@@ -95,7 +95,7 @@ private:
     void adaptThresholds();
     double calculateRiskLevel(const Move& move) const;
     double calculateHintEfficiency(const Move& move) const;
-    NetB::PlayStyleType determinePlayStyle(const NetB::PlayStyle& style) const;
+    AdaB::PlayStyleType determinePlayStyle(const AdaB::PlayStyle& style) const;
     
     // Move analysis
     struct MoveAnalysis {
@@ -106,7 +106,7 @@ private:
     };
     
     MoveAnalysis analyzePotentialMove(const Hanabi::Server& server, const Move& move) const;
-    double calculateMoveScore(const MoveAnalysis& analysis, const NetB::PlayStyle& style) const;
+    double calculateMoveScore(const MoveAnalysis& analysis, const AdaB::PlayStyle& style) const;
     
     // Strategy methods
     bool tryPlayCard(Hanabi::Server& server);
@@ -116,7 +116,7 @@ private:
     
     // Utility methods
     std::vector<Move> generatePossibleMoves(const Hanabi::Server& server) const;
-    double calculatePlayProbability(const NetB::CardKnowledge& knowledge) const;
+    double calculatePlayProbability(const AdaB::CardKnowledge& knowledge) const;
     bool isCardCritical(const Hanabi::Card& card) const;
     double evaluateHintValue(const Move& hint) const;
     void updateCardKnowledge();
@@ -130,7 +130,7 @@ private:
     double predictMoveSuccess(const Move& move) const;
 
 public:
-    NetworkBot(int index, int numPlayers, int handSize);
+    AdaptBot(int index, int numPlayers, int handSize);
     void pleaseObserveBeforeMove(const Hanabi::Server &) override;
     void pleaseMakeMove(Hanabi::Server &) override;
     void pleaseObserveBeforeDiscard(const Hanabi::Server &, int from, int card_index) override;
@@ -138,5 +138,5 @@ public:
     void pleaseObserveColorHint(const Hanabi::Server &, int from, int to, Hanabi::Color color, Hanabi::CardIndices card_indices) override;
     void pleaseObserveValueHint(const Hanabi::Server &, int from, int to, Hanabi::Value value, Hanabi::CardIndices card_indices) override;
     void pleaseObserveAfterMove(const Hanabi::Server &) override;
-    NetworkBot* clone() const override;
+    AdaptBot* clone() const override;
 };

@@ -11,11 +11,11 @@
 #include "BotFactory.h"
 
 using namespace Hanabi;
-using namespace NetB;
+using namespace AdaB;
 
 // Register the bot with the factory
 static void _registerBots() {
-    registerBotFactory("AdaptBot", std::shared_ptr<Hanabi::BotFactory>(new ::BotFactory<NetworkBot>()));
+    registerBotFactory("AdaptBot", std::shared_ptr<Hanabi::BotFactory>(new ::BotFactory<AdaptBot>()));
 }
 static int dummy = (_registerBots(), 0);
 
@@ -88,7 +88,7 @@ void CardKnowledge::updatePlayability(const Server& server) {
     criticalProbability = totalCombs > 0 ? static_cast<double>(criticalCombs) / totalCombs : 0.0;
 }
 
-NetworkBot::NetworkBot(int index, int numPlayers, int handSize)
+AdaptBot::AdaptBot(int index, int numPlayers, int handSize)
     : me_(index)
     , partner_(1 - index)  // In 2-player game, partner is always the other player
     , playThreshold_(0.7)
@@ -106,7 +106,7 @@ NetworkBot::NetworkBot(int index, int numPlayers, int handSize)
     moveHistory_.resize(numPlayers);
 }
 
-double NetworkBot::calculateRiskLevel(const Move& move) const {
+double AdaptBot::calculateRiskLevel(const Move& move) const {
     if (move.type == PLAY_CARD) {
         const auto& knowledge = handKnowledge_[me_][move.value];
         return 1.0 - knowledge.playProbability;
@@ -114,7 +114,7 @@ double NetworkBot::calculateRiskLevel(const Move& move) const {
     return 0.0;  // Non-play moves have no inherent risk
 }
 
-double NetworkBot::calculateHintEfficiency(const Move& move) const {
+double AdaptBot::calculateHintEfficiency(const Move& move) const {
     if (move.type != HINT_COLOR && move.type != HINT_VALUE) return 0.0;
     
     // Calculate how many cards were affected by the hint
@@ -131,7 +131,7 @@ double NetworkBot::calculateHintEfficiency(const Move& move) const {
     return efficiency;
 }
 
-void NetworkBot::updatePartnerStyle(const Server& server, const Move& move) {
+void AdaptBot::updatePartnerStyle(const Server& server, const Move& move) {
     auto& style = playerStyles_[partner_];
     
     switch(move.type) {
@@ -167,7 +167,7 @@ void NetworkBot::updatePartnerStyle(const Server& server, const Move& move) {
     style.dominantStyle = determinePlayStyle(style);
 }
 
-PlayStyleType NetworkBot::determinePlayStyle(const PlayStyle& style) const {
+PlayStyleType AdaptBot::determinePlayStyle(const PlayStyle& style) const {
     if (style.riskTolerance > 0.7) return PlayStyleType::AGGRESSIVE;
     if (style.hintEfficiency > 0.7) return PlayStyleType::HINT_FOCUSED;
     if (style.discardFrequency > 0.7) return PlayStyleType::DISCARD_FOCUSED;
@@ -175,7 +175,7 @@ PlayStyleType NetworkBot::determinePlayStyle(const PlayStyle& style) const {
 }
 
 // Move analysis methods
-NetworkBot::MoveAnalysis NetworkBot::analyzePotentialMove(const Server& server, const Move& move) const {
+AdaptBot::MoveAnalysis AdaptBot::analyzePotentialMove(const Server& server, const Move& move) const {
     MoveAnalysis analysis{0.0, 0.0, 0.0, 0.0};
     
     switch (move.type) {
@@ -219,7 +219,7 @@ NetworkBot::MoveAnalysis NetworkBot::analyzePotentialMove(const Server& server, 
     return analysis;
 }
 
-double NetworkBot::calculateMoveScore(const MoveAnalysis& analysis, const PlayStyle& style) const {
+double AdaptBot::calculateMoveScore(const MoveAnalysis& analysis, const PlayStyle& style) const {
     double score = 0.0;
     
     // Base score from success probability
@@ -239,7 +239,7 @@ double NetworkBot::calculateMoveScore(const MoveAnalysis& analysis, const PlaySt
 }
 
 // Core strategy methods
-bool NetworkBot::tryPlayCard(Server& server) {
+bool AdaptBot::tryPlayCard(Server& server) {
     std::vector<std::pair<int, double>> playableCards;
     
     // Evaluate all cards in hand
@@ -262,7 +262,7 @@ bool NetworkBot::tryPlayCard(Server& server) {
     return false;
 }
 
-bool NetworkBot::tryGiveHint(Server& server) {
+bool AdaptBot::tryGiveHint(Server& server) {
     // Wheb no hint stones are left, can't give hints
     if (server.hintStonesRemaining() == 0) return false;
 
@@ -325,7 +325,7 @@ bool NetworkBot::tryGiveHint(Server& server) {
     return false;
 }
 
-bool NetworkBot::tryGiveOneStoneHint(Server& server) {
+bool AdaptBot::tryGiveOneStoneHint(Server& server) {
     const auto& partnerHand = server.handOfPlayer(partner_);
     
     // First priority: Look for playable cards
@@ -387,7 +387,7 @@ bool NetworkBot::tryGiveOneStoneHint(Server& server) {
     return false;
 }
 
-bool NetworkBot::tryDiscard(Server& server) {
+bool AdaptBot::tryDiscard(Server& server) {
     if (!server.discardingIsAllowed()) return false;
     
     // Find safest card to discard
@@ -413,7 +413,7 @@ bool NetworkBot::tryDiscard(Server& server) {
 }
 
 // Utility methods
-double NetworkBot::evaluateHintValue(const Move& hint) const {
+double AdaptBot::evaluateHintValue(const Move& hint) const {
     double value = 0.0;
     const auto& partnerHand = server_->handOfPlayer(partner_);
     bool providesNewInfo = false;
@@ -486,7 +486,7 @@ double NetworkBot::evaluateHintValue(const Move& hint) const {
     return value;
 }
 
-void NetworkBot::pleaseObserveBeforeMove(const Server& server) {
+void AdaptBot::pleaseObserveBeforeMove(const Server& server) {
     server_ = &server;
     assert(server.whoAmI() == me_);
     
@@ -502,7 +502,7 @@ void NetworkBot::pleaseObserveBeforeMove(const Server& server) {
     adaptThresholds();
 }
 
-void NetworkBot::adaptThresholds() {
+void AdaptBot::adaptThresholds() {
     const auto& partnerStyle = playerStyles_[partner_];
     
     // Adjust play threshold based on partner's style and game state
@@ -525,7 +525,7 @@ void NetworkBot::adaptThresholds() {
     }
 }
 
-std::vector<Move> NetworkBot::generatePossibleMoves(const Hanabi::Server& server) const {
+std::vector<Move> AdaptBot::generatePossibleMoves(const Hanabi::Server& server) const {
     std::vector<Move> possibleMoves;
     
     // Add all possible plays
@@ -567,7 +567,7 @@ std::vector<Move> NetworkBot::generatePossibleMoves(const Hanabi::Server& server
     return possibleMoves;
 }
 
-double NetworkBot::calculatePlayProbability(const NetB::CardKnowledge& knowledge) const {
+double AdaptBot::calculatePlayProbability(const AdaB::CardKnowledge& knowledge) const {
     int playableCombs = 0;
     int totalCombs = 0;
     
@@ -637,7 +637,7 @@ double NetworkBot::calculatePlayProbability(const NetB::CardKnowledge& knowledge
     return totalCombs > 0 ? static_cast<double>(playableCombs) / totalCombs : 0.0;
 }
 
-bool NetworkBot::isCardCritical(const Hanabi::Card& card) const {
+bool AdaptBot::isCardCritical(const Hanabi::Card& card) const {
     // A card is critical if:
     // 1. It hasn't been played yet
     // 2. It's the last copy available
@@ -656,7 +656,7 @@ bool NetworkBot::isCardCritical(const Hanabi::Card& card) const {
     return discardedCopies == card.count() - 1;
 }
 
-void NetworkBot::analyzeHintPatterns() {
+void AdaptBot::analyzeHintPatterns() {
     auto& partnerHistory = moveHistory_[partner_];
     
     // Look for patterns in recent hints
@@ -687,7 +687,7 @@ void NetworkBot::analyzeHintPatterns() {
     }
 }
 
-void NetworkBot::updateHintEfficiency(const Move& move, bool resultedInPlay) {
+void AdaptBot::updateHintEfficiency(const Move& move, bool resultedInPlay) {
     if (move.type != HINT_COLOR && move.type != HINT_VALUE) return;
     
     auto& style = playerStyles_[move.to];
@@ -708,7 +708,7 @@ void NetworkBot::updateHintEfficiency(const Move& move, bool resultedInPlay) {
     moveHistory_[move.to].hintPatterns.push_back(pattern);
 }
 
-double NetworkBot::predictMoveSuccess(const Move& move) const {
+double AdaptBot::predictMoveSuccess(const Move& move) const {
     switch (move.type) {
         case PLAY_CARD: {
             return handKnowledge_[me_][move.value].playProbability;
@@ -730,7 +730,7 @@ double NetworkBot::predictMoveSuccess(const Move& move) const {
     }
 }
 
-void NetworkBot::pleaseMakeMove(Server& server) {
+void AdaptBot::pleaseMakeMove(Server& server) {
     server_ = &server;
     assert(server.whoAmI() == me_);
 
@@ -764,7 +764,7 @@ void NetworkBot::pleaseMakeMove(Server& server) {
     }
 }
 
-void NetworkBot::pleaseObserveBeforeDiscard(const Server& server, int from, int card_index) {
+void AdaptBot::pleaseObserveBeforeDiscard(const Server& server, int from, int card_index) {
     // Update knowledge tracking
     auto& playerKnowledge = handKnowledge_[from];
     if (card_index < playerKnowledge.size() - 1) {
@@ -786,7 +786,7 @@ void NetworkBot::pleaseObserveBeforeDiscard(const Server& server, int from, int 
     }
 }
 
-void NetworkBot::pleaseObserveBeforePlay(const Server& server, int from, int card_index) {
+void AdaptBot::pleaseObserveBeforePlay(const Server& server, int from, int card_index) {
     // Similar to discard but with play move
     pleaseObserveBeforeDiscard(server, from, card_index);
     
@@ -796,7 +796,7 @@ void NetworkBot::pleaseObserveBeforePlay(const Server& server, int from, int car
     }
 }
 
-void NetworkBot::pleaseObserveColorHint(const Server& server, int from, int to, 
+void AdaptBot::pleaseObserveColorHint(const Server& server, int from, int to, 
                                       Color color, CardIndices card_indices) {
     // Update knowledge for each affected card
     for (int i = 0; i < server.sizeOfHandOfPlayer(to); i++) {
@@ -831,7 +831,7 @@ void NetworkBot::pleaseObserveColorHint(const Server& server, int from, int to,
     }
 }
 
-void NetworkBot::pleaseObserveValueHint(const Server& server, int from, int to,
+void AdaptBot::pleaseObserveValueHint(const Server& server, int from, int to,
                                       Value value, CardIndices card_indices) {
     // Update knowledge for each affected card
     for (int i = 0; i < server.sizeOfHandOfPlayer(to); i++) {
@@ -866,13 +866,13 @@ void NetworkBot::pleaseObserveValueHint(const Server& server, int from, int to,
     }
 }
 
-void NetworkBot::pleaseObserveAfterMove(const Server& server) {
+void AdaptBot::pleaseObserveAfterMove(const Server& server) {
     assert(server.whoAmI() == me_);
     // Update card knowledge after move resolution
     updateCardKnowledge();
 }
 
-void NetworkBot::updateCardKnowledge() {
+void AdaptBot::updateCardKnowledge() {
     // Update knowledge of visible cards
     for (int p = 0; p < 2; p++) {  // Only 2 players
         if (p == me_) continue;
@@ -889,8 +889,8 @@ void NetworkBot::updateCardKnowledge() {
     }
 }
 
-NetworkBot* NetworkBot::clone() const {
-    NetworkBot* b = new NetworkBot(me_, 2, handKnowledge_[0].size());
+AdaptBot* AdaptBot::clone() const {
+    AdaptBot* b = new AdaptBot(me_, 2, handKnowledge_[0].size());
     
     // Copy basic state
     b->server_ = this->server_;
