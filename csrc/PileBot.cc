@@ -120,6 +120,10 @@ bool PileBot::tryPlayPriorityCard(Hanabi::Server& server) {
 bool PileBot::tryGivePriorityHint(Hanabi::Server& server) {
     if (server.hintStonesRemaining() == 0) return false;
 
+    if (server.hintStonesRemaining() == 1) {
+        return tryGiveOneStoneHint(server);
+    }
+
     std::vector<HintOption> possibleHints;
     auto priorityPiles = getPrioritizedPiles(server);
     
@@ -371,6 +375,66 @@ bool PileBot::trySafePriorityDiscard(Hanabi::Server& server) {
     }
     
     return false;  // Don't discard if we don't have to
+}
+
+bool PileBot::tryGiveOneStoneHint(Server& server) {
+    const auto& partnerHand = server.handOfPlayer(numPlayers_-me_-1); //Next player (optimised for a 2 player game)
+    auto priorityPiles = getPrioritizedPiles(server);
+    
+    // First priority: Look for playable cards in the most advanced pile first
+    for (const auto& pile : priorityPiles) {
+        // Track which cards would be affected by this color hint
+        std::vector<int> affectedIndices;
+        bool hasPlayableCard = false;
+        
+        // Check cards from newest to oldest
+        for (int i = partnerHand.size() - 1; i >= 0; i--) {
+            const Card& card = partnerHand[i];
+            if (card.color == pile.color) {
+                affectedIndices.push_back(i);
+                // If this is the newest affected card and it's playable in this pile
+                if (affectedIndices.size() == 1 && 
+                    server.pileOf(card.color).nextValueIs(card.value)) {
+                    hasPlayableCard = true;
+                    break;
+                }
+            }
+        }
+
+        // If we found cards of this color and the newest one is playable
+        // Give the hint immediately since piles are sorted by priority
+        if (!affectedIndices.empty() && hasPlayableCard) {
+            server.pleaseGiveColorHint(numPlayers_-me_-1, pile.color);
+            return true;
+        }
+    }
+
+    // Second priority: Look for safely discardable cards
+    for (int value = 1; value <= 5; value++) {
+        int affectedCards = 0;
+        int discardableCardIndex = -1;
+        bool hasCriticalCards = false;
+        
+        for (int i = 0; i < partnerHand.size(); i++) {
+            const Card& card = partnerHand[i];
+            if (card.value == value) {
+                affectedCards++;
+                if (!isCardCritical(card)) {
+                    discardableCardIndex = i;
+                } else {
+                    hasCriticalCards = true;
+                }
+            }
+        }
+        
+        // Give value hint only if it uniquely identifies a non-critical card
+        if (discardableCardIndex != -1 && !hasCriticalCards && affectedCards == 1) {
+            server.pleaseGiveValueHint(numPlayers_-me_-1, static_cast<Value>(value));
+            return true;
+        }
+    }
+    
+    return false;
 }
 
 double PileBot::calculatePlayProbability(const CardKnowledge& knowledge, Color targetColor) const {
@@ -634,6 +698,24 @@ void PileBot::pleaseObserveColorHint(const Server& server, int from, int to,
         knowledge.updateFromHint(true, static_cast<int>(color), 
                                card_indices.contains(i));
     }
+
+    // Handle one-stone convention when we receive the hint
+    if (server.hintStonesRemaining() == 1 && to == me_) {
+        // Find the newest affected card
+        int newestAffectedIndex = -1;
+        for (int i = server.sizeOfHandOfPlayer(me_) - 1; i >= 0; i--) {
+            if (card_indices.contains(i)) {
+                newestAffectedIndex = i;
+                break;
+            }
+        }
+        
+        // If we found an affected card, it must be playable on its pile
+        if (newestAffectedIndex != -1) {
+            auto& knowledge = handKnowledge_[me_][newestAffectedIndex];
+            knowledge.isPlayable = true;
+        }
+    }
 }
 
 void PileBot::pleaseObserveValueHint(const Server& server, int from, int to,
@@ -645,6 +727,25 @@ void PileBot::pleaseObserveValueHint(const Server& server, int from, int to,
         }
         knowledge.updateFromHint(false, static_cast<int>(value), 
                                card_indices.contains(i));
+    }
+
+    // Handle one-stone convention when we receive the hint
+    if (server.hintStonesRemaining() == 1 && to == me_) {
+        int affectedCards = 0;
+        int affectedIndex = -1;
+        
+        // Count affected cards
+        for (int i = 0; i < server.sizeOfHandOfPlayer(me_); i++) {
+            if (card_indices.contains(i)) {
+                affectedCards++;
+                affectedIndex = i;
+            }
+        }
+        
+        // If exactly one card is affected, it's safely discardable
+        if (affectedCards == 1) {
+            handKnowledge_[me_][affectedIndex].isDiscardable = true;
+        }
     }
 }
 

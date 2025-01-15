@@ -62,6 +62,8 @@ private:
     bool tryPlayPriorityCard(Hanabi::Server& server);
     bool tryGivePriorityHint(Hanabi::Server& server);
     bool trySafePriorityDiscard(Hanabi::Server& server);
+    bool tryGiveOneStoneHint(Hanabi::Server& server);
+
 
     // Utility methods
     double calculatePlayProbability(const PileB::CardKnowledge& card, Hanabi::Color targetColor) const;

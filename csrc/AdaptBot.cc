@@ -329,35 +329,34 @@ bool AdaptBot::tryGiveOneStoneHint(Server& server) {
     const auto& partnerHand = server.handOfPlayer(partner_);
     
     // First priority: Look for playable cards
-    std::vector<Move> possibleColorHints;
+    // Check each color
     for (Color color = RED; color <= BLUE; ++color) {
-        // Count how many cards of this color would be affected
-        int affectedCards = 0;
-        int playableCardIndex = -1;
-        bool hasUnplayableCards = false;
+        // Track which cards would be affected by this color hint
+        std::vector<int> affectedIndices;
+        bool hasPlayableCard = false;
         
-        for (int i = 0; i < partnerHand.size(); i++) {
+        // Check cards from newest to oldest
+        for (int i = partnerHand.size() - 1; i >= 0; i--) {
             const Card& card = partnerHand[i];
             if (card.color == color) {
-                affectedCards++;
-                if (server_->pileOf(card.color).nextValueIs(card.value)) {
-                    playableCardIndex = i;
-                } else {
-                    hasUnplayableCards = true;
+                affectedIndices.push_back(i);
+                // If this is the newest affected card, check if it's playable
+                if (affectedIndices.size() == 1 && 
+                    server.pileOf(card.color).nextValueIs(card.value)) {
+                    hasPlayableCard = true;
+                    break;  // We found our playable card, no need to check older ones
                 }
             }
         }
-        
-        // Only give color hint if it uniquely identifies a playable card
-        // or affects only the target card
-        if (playableCardIndex != -1 && !hasUnplayableCards && affectedCards == 1) {
+
+        // If we found cards of this color and the newest one is playable, give the hint
+        if (!affectedIndices.empty() && hasPlayableCard) {
             server.pleaseGiveColorHint(partner_, color);
             return true;
         }
     }
-    
+
     // Second priority: Look for safely discardable cards
-    std::vector<Move> possibleValueHints;
     for (int value = 1; value <= 5; ++value) {
         // Count how many cards of this value would be affected
         int affectedCards = 0;
@@ -507,9 +506,9 @@ void AdaptBot::adaptThresholds() {
     
     // Adjust play threshold based on partner's style and game state
     if (partnerStyle.dominantStyle == PlayStyleType::AGGRESSIVE) {
-        playThreshold_ = 0.5;  // We can be more conservative
+        playThreshold_ = 0.7;  // We can be more conservative
     } else if (partnerStyle.dominantStyle == PlayStyleType::CONSERVATIVE) {
-        playThreshold_ = 0.7;  // We need to be more aggressive
+        playThreshold_ = 0.5;  // We need to be more aggressive
     }
     
     // Adjust hint threshold based on partner's hint efficiency
@@ -804,22 +803,21 @@ void AdaptBot::pleaseObserveColorHint(const Server& server, int from, int to,
                                            card_indices.contains(i));
     }
 
-    // Apply one-stone convention
+   // Handle one-stone convention
     if (isOneHintStoneLeft() && to == me_) {
-        int affectedCards = 0;
-        int affectedIndex = -1;
-        
-        // Count affected cards
-        for (int i = 0; i < server.sizeOfHandOfPlayer(me_); i++) {
+        // Find the newest affected card
+        int newestAffectedIndex = -1;
+        for (int i = server.sizeOfHandOfPlayer(me_) - 1; i >= 0; i--) {
             if (card_indices.contains(i)) {
-                affectedCards++;
-                affectedIndex = i;
+                newestAffectedIndex = i;
+                break;
             }
         }
         
-        // Only interpret as play hint if exactly one card is affected
-        if (affectedCards == 1) {
-            handKnowledge_[me_][affectedIndex].isPlayable = true;
+        // If we found an affected card, it must be playable
+        if (newestAffectedIndex != -1) {
+            auto& knowledge = handKnowledge_[me_][newestAffectedIndex];
+            knowledge.isPlayable = true;
         }
     }
 
