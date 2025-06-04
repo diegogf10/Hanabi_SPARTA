@@ -99,13 +99,14 @@ def run_command(command, output_file):
 # -------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # Define the list of bots
-bots = ['SimpleBot', 'ValueBot', 'HolmesBot', 'SmartBot', 'InfoBot', 'CheatBot'] 
+bots_training = ['SimpleBot', 'ValueBot', 'HolmesBot', 'SmartBot', 'InfoBot', 'AdaptBot', 'MetaBot'] 
+bots_validation = ['PileBot', 'SignalBot']
 
 # Run each command and capture its output
-for bot1 in bots:
-    for bot2 in bots: 
-        command = f'unbuffer python eval_bot.py {bot1} {bot2}  --games 7800 --qa 1' # aiming for 280k samples total
-        output_file = f'output_no_qa_2/output_no_qa_2_{bot1}_{bot2}.txt'
+for bot1 in bots_training:
+    for bot2 in bots_training: 
+        command = f'unbuffer python eval_bot.py {bot1} {bot2} --games 4500 --qa 1' # aiming for 200k samples total
+        output_file = f'training_prediction_games/prediction_games_{bot1}_{bot2}.txt'
         run_command(command, output_file)
         print(f"Executed command '{command}' and saved output to '{output_file}'.")
 
@@ -116,18 +117,18 @@ for bot1 in bots:
 # print(f"Executed command '{command}' and saved output to '{output_file}'.")
 
 # Process each file and collect all JSON objects
-all_json_objects = []
-for input_file_path in glob.glob('output_no_qa_2/output_*.txt'):
-    start_id = len(all_json_objects)
-    json_objects = process_file(input_file_path, start_id)
-    all_json_objects.extend(json_objects)
-    print(f"Processed '{input_file_path}'.")
+# all_json_objects = []
+# for input_file_path in glob.glob('output_no_qa_2/output_*.txt'):
+#     start_id = len(all_json_objects)
+#     json_objects = process_file(input_file_path, start_id)
+#     all_json_objects.extend(json_objects)
+#     print(f"Processed '{input_file_path}'.")
 
-# Fine-tuning format of certain models
-all_json_objects = convert_to_fine_tune_format(all_json_objects)
+# # Fine-tuning format of certain models
+# all_json_objects = convert_to_fine_tune_format(all_json_objects)
 
-# Write all JSON objects to a single output file
-with open('output_no_qa_2/output.json', 'w') as json_file:
-    json.dump(all_json_objects, json_file, indent=4)
+# # Write all JSON objects to a single output file
+# with open('output_no_qa_2/output.json', 'w') as json_file:
+#     json.dump(all_json_objects, json_file, indent=4)
 
-print(f"Saved all results to 'output_no_qa/output.json'.")
+# print(f"Saved all results to 'output_no_qa/output.json'.")

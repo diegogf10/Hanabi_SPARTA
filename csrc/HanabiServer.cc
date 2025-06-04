@@ -314,8 +314,8 @@ int Server::runToCompletion() {
     //In-game Q&A logic for the agent's own cards (answers based on common knowledge that can be inferred from the game state -i.e. not every bot should know the correct answer)
     if (this->qa_ == 1) {
         if (this->cardsRemainingInDeck() <= questionRound && activePlayer_ == 0) {
-            Question question = this->generateRandomQuestion();
-            Answer answer = processQuestion(question);
+            // Question question = this->generateRandomQuestion();
+            // Answer answer = processQuestion(question);
             //std::map<std::string, std::string> handKnowledgeMain = players_[activePlayer_]->handKnowledgeToMap();
             //std::map<std::string, std::string> handKnowledgePartner = players_[activePlayer_+1]->handKnowledgeToMap();
             // if (question.getType() == Question::Type::COLOR) {
@@ -333,9 +333,9 @@ int Server::runToCompletion() {
             // players_[activePlayer_]->printHandKnowledge(handKnowledgeMain);
             // (*log_) << "hand_knowledge P" << activePlayer_+1 << ": \n";
             // players_[activePlayer_+1]->printHandKnowledge(handKnowledgePartner);
-            // this->logAllHands_();
-            // this->logPiles_();
-            // (*log_) << "discards: " << this->discardsAsString()<< "\n"; 
+            this->logAllHands_();
+            this->logPiles_();
+            (*log_) << "discards: " << this->discardsAsString()<< "\n"; 
             (*log_) << "cards_remaining: " << this->cardsRemainingInDeck() << "\n";
             // (*log_) << "question_position: " << nth(question.getCardPosition(), sizeOfHandOfPlayer(activePlayer_)) << "\n";
             // if (question.getType() == Question::Type::COLOR) {
@@ -1180,7 +1180,7 @@ void Server::logHands_() const
 {
     if (log_) {
         (*log_) << "Hands:";
-        for (int i=0; i < numPlayers_; ++i) {
+        for (int i=1; i < numPlayers_; ++i) {
             (*log_) << " P" << i << " cards are";
             for (int j=0; j < (int)hands_[i].size(); ++j) {
                 (*log_) << (j ? "," : " ") << hands_[i][j].toString();
